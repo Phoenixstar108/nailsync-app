@@ -1,0 +1,81 @@
+<!doctype html>
+<!-- NailSync · TRANG IN QR CHO TIỆM — mở rồi Ctrl+P là in.
+     URL: qr.html?salon=<SALON_ID>&chairs=10&base=<đường dẫn app, mặc định tự lấy> -->
+<html lang="vi">
+<head>
+<meta charset="utf-8"/>
+<title>NailSync — QR in dán tiệm</title>
+<style>
+  body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;color:#222;margin:0;background:#fff}
+  .page{width:760px;margin:0 auto;padding:28px 20px;page-break-after:always}
+  h1{color:#c2185b;font-size:26px;margin:0 0 2px}
+  .sub{color:#777;font-size:13px;margin-bottom:18px}
+  .bigqr{text-align:center;border:3px solid #c2185b;border-radius:24px;padding:30px;margin-top:10px}
+  .bigqr img{width:340px;height:340px}
+  .bigqr .t{font-size:30px;font-weight:800;margin:14px 0 4px}
+  .bigqr .d{font-size:16px;color:#555}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .chair{border:2px solid #c2185b;border-radius:18px;padding:16px;text-align:center}
+  .chair img{width:200px;height:200px}
+  .chair .t{font-size:22px;font-weight:800;margin-top:8px}
+  .chair .d{font-size:13px;color:#555}
+  table{width:100%;border-collapse:collapse;font-size:14px;margin-top:10px}
+  td,th{border:1px solid #ddd;padding:9px 10px;text-align:left;word-break:break-all}
+  th{background:#fde7ef;color:#9d1248}
+  .pin{font-size:20px;font-weight:800;color:#9d1248}
+  @media print{.noprint{display:none}}
+  .noprint{background:#fde7ef;padding:10px 14px;border-radius:10px;margin-bottom:14px;font-size:14px}
+</style>
+</head>
+<body>
+<script>
+const qs=new URLSearchParams(location.search);
+const SALON=qs.get("salon")||"11111111-1111-1111-1111-111111111111";
+const CHAIRS=parseInt(qs.get("chairs")||"10",10);
+const BASE=(qs.get("base")||location.href.replace(/qr\.html.*$/,"")).replace(/\/?$/,"/");
+const QR=(data,size)=>`https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=1&data=${encodeURIComponent(data)}`;
+const link=p=>`${BASE}${p}?salon=${SALON}`;
+
+document.write(`
+<div class="page">
+  <div class="noprint">🖨️ Bấm <b>Ctrl + P</b> để in. Trang 1 dán ở QUẦY · các trang sau cắt rời dán TỪNG GHẾ.</div>
+  <h1>💅 Check-in tại đây</h1>
+  <div class="sub">Dán ở quầy lễ tân — khách quét bằng camera điện thoại</div>
+  <div class="bigqr">
+    <img src="${QR(link("checkin.html"),340)}"/>
+    <div class="t">QUÉT ĐỂ CHECK-IN ✨</div>
+    <div class="d">Scan to check in · Không cần tải app</div>
+  </div>
+</div>`);
+
+let cards="";
+for(let c=1;c<=CHAIRS;c++){
+  cards+=`<div class="chair">
+    <img src="${QR(link("drink.html")+"&chair="+c,200)}"/>
+    <div class="t">GHẾ ${c} · 🍹 Gọi nước</div>
+    <div class="d">Quét để gọi nước — đem tận ghế</div>
+  </div>`;
+  if(c%6===0||c===CHAIRS){
+    document.write(`<div class="page"><h1>🍹 QR gọi nước theo ghế</h1>
+      <div class="sub">Cắt rời, dán/ép plastic ở từng ghế đúng số</div>
+      <div class="grid">${cards}</div></div>`);
+    cards="";
+  }
+}
+
+document.write(`
+<div class="page">
+  <h1>🔑 Dành cho nhân viên (KHÔNG dán công khai)</h1>
+  <div class="sub">Lưu các link này vào điện thoại/tablet — bấm "Thêm vào màn hình chính" để dùng như app</div>
+  <table>
+    <tr><th>Màn</th><th>Link</th></tr>
+    <tr><td>Lễ tân (tablet ở quầy)</td><td>${link("reception.html")}</td></tr>
+    <tr><td>Thợ (điện thoại từng thợ)</td><td>${link("worker.html")}</td></tr>
+    <tr><td>Quầy nước</td><td>${link("drinks.html")}</td></tr>
+  </table>
+  <p>Mã PIN đăng nhập nhân viên: <span class="pin">2468</span> — đổi được bất cứ lúc nào.</p>
+  <p style="color:#777;font-size:12px">Powered by NailSync · Phoenix Star</p>
+</div>`);
+</script>
+</body>
+</html>
