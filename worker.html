@@ -1,0 +1,334 @@
+<!doctype html>
+<!-- NailSync Block 1 · MÀN THỢ (worker phone screen)
+     Phone-first · bilingual VI/EN · self-contained.
+     Auth: salon PIN -> staff_login token; worker picks their own name once (localStorage).
+     Also the web fallback for Telegram buttons: Đang tới (On the way) / Xong (Done).
+     URL: worker.html?salon=<SALON_ID> -->
+<html lang="vi">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>NailSync — Thợ</title>
+<style>
+  :root{
+    --ink:#2b2026; --ink-soft:#6c5b63; --muted:#a2929a;
+    --rose:#c2185b; --rose-deep:#9d1248; --blush:#fde7ef; --cream:#fffafc;
+    --gold:#caa56a; --line:#f1e4ea; --ok:#2e7d32; --warn:#e65100; --bad:#c62828;
+    --shadow:0 14px 40px -16px rgba(157,18,72,.28);
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:var(--sans);color:var(--ink);background:linear-gradient(180deg,#fff7fb,#fff3f7);min-height:100svh}
+  .wrap{max-width:430px;margin:0 auto;padding:16px}
+  h1{font-size:19px;color:var(--rose-deep);margin:6px 0 2px}
+  .sub{font-size:12.5px;color:var(--muted)}
+  .card{background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:16px;margin:12px 0}
+  button{font-family:inherit;cursor:pointer;border:none;border-radius:14px;font-size:15px}
+  .btn{padding:14px 18px;background:var(--rose);color:#fff;font-weight:700;width:100%}
+  .btn:disabled{opacity:.45}
+  .btn.ghost{background:#fff;color:var(--rose-deep);border:1.5px solid var(--line)}
+  .btn.green{background:var(--ok)} .btn.warn{background:var(--bad)}
+  .row{display:flex;gap:10px} .row .btn{flex:1}
+  input{width:100%;padding:12px;border:1.5px solid var(--line);border-radius:14px;font-size:18px;text-align:center;letter-spacing:.35em;font-family:inherit}
+  .pill{display:inline-block;font-size:12px;padding:3px 10px;border-radius:999px;background:var(--blush);color:var(--rose-deep);margin:2px 4px 2px 0}
+  .big{font-size:42px;text-align:center;margin:6px 0}
+  .pos{font-size:30px;font-weight:800;color:var(--rose-deep);text-align:center}
+  .statusline{text-align:center;font-size:14px;color:var(--ink-soft)}
+  .opts{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+  .opt{padding:11px 14px;border:1.5px solid var(--line);border-radius:14px;background:#fff;font-size:15px}
+  .opt.sel{border-color:var(--rose);background:var(--blush);color:var(--rose-deep);font-weight:700}
+  #toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:12px;font-size:14px;display:none;z-index:99;max-width:90vw}
+  .meta{font-size:13px;color:var(--ink-soft)}
+  .jobsvc{font-size:22px;font-weight:800;color:var(--rose-deep)}
+  .countdown{font-variant-numeric:tabular-nums;font-weight:800;font-size:26px;text-align:center;color:#7b1fa2}
+  .topbar{display:flex;align-items:center;justify-content:space-between}
+  .linkish{background:none;border:none;color:var(--muted);font-size:12.5px;text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- LOGIN -->
+  <div id="login">
+    <h1>💅 NailSync — Thợ</h1>
+    <div class="sub">Nhập mã PIN của tiệm · salon staff PIN</div>
+    <div class="card">
+      <input id="pin" type="password" inputmode="numeric" placeholder="••••" maxlength="12"/>
+      <div style="height:10px"></div>
+      <button class="btn" id="loginBtn">Vào · Sign in</button>
+      <p id="loginMsg" style="color:var(--bad);min-height:18px;font-size:13px"></p>
+    </div>
+  </div>
+
+  <!-- PICK WHO -->
+  <div id="who" style="display:none">
+    <h1>Bạn là thợ nào?</h1>
+    <div class="sub">Chọn đúng tên mình — lưu trên máy này</div>
+    <div class="card"><div class="opts" id="whoOpts"></div></div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="app" style="display:none">
+    <div class="topbar">
+      <div><h1 id="myName">…</h1><div class="sub" id="salonName"></div></div>
+      <button class="linkish" id="switchBtn">đổi người / thoát</button>
+    </div>
+
+    <div class="card" id="stateCard"></div>
+    <div class="card" id="jobCard" style="display:none"></div>
+    <div class="card" id="actionCard"></div>
+  </div>
+
+</div>
+<div id="toast"></div>
+
+<script>
+/* ================= CONFIG ================= */
+const SUPABASE_URL = "https://liavvyeklmixeyudfwxm.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpYXZ2eWVrbG1peGV5dWRmd3htIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODgyOTAsImV4cCI6MjA5NjM2NDI5MH0.vzUiOMRkWYSZ4zGejqKAvq0_-C3YIrM_wa0fTyOmT-E";
+/* ========================================== */
+const qs = new URLSearchParams(location.search);
+const SALON = qs.get("salon") || localStorage.getItem("ns_salon") || "";
+const SVC_LABEL = {hands:"Tay · Hands", feet:"Chân · Feet", mani:"Mani", pedi:"Pedi",
+  powder:"Bột · Powder", full_set:"Full set", fill:"Fill", design:"Design"};
+let TOKEN = localStorage.getItem("ns_token") || null;
+let MYID  = localStorage.getItem("ns_worker_id") || null;
+let STATE = null, timer = null;
+let lastPendingId = null;           // để phát hiện job MỚI -> chuông
+let form = null;                    // state form sau-Done {sid, polishes[], noPolish, a1,a2,a3}
+
+/* ---- chuông + rung báo khách mới (thay Telegram) ---- */
+let AC = null;
+function initAudio(){ try{ if(!AC) AC = new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==="suspended") AC.resume(); }catch(e){} }
+document.addEventListener("click", initAudio, {once:false});
+function chime(){
+  try{
+    initAudio(); if(!AC) return;
+    [0,.35,.7].forEach((t,i)=>{
+      const o=AC.createOscillator(), g=AC.createGain();
+      o.connect(g); g.connect(AC.destination);
+      o.frequency.value = i===2 ? 1318 : 988;       // B5 B5 E6
+      g.gain.setValueAtTime(.0001, AC.currentTime+t);
+      g.gain.exponentialRampToValueAtTime(.4, AC.currentTime+t+.02);
+      g.gain.exponentialRampToValueAtTime(.0001, AC.currentTime+t+.3);
+      o.start(AC.currentTime+t); o.stop(AC.currentTime+t+.32);
+    });
+  }catch(e){}
+  if(navigator.vibrate) navigator.vibrate([250,120,250,120,400]);
+  let n=0; const ot=document.title;
+  const f=setInterval(()=>{ document.title = (n++%2)?"🔔 KHÁCH MỚI!":ot; if(n>9){clearInterval(f);document.title=ot;} },700);
+}
+
+const $ = id => document.getElementById(id);
+const esc = s => (s??"").toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const svcName = s => SVC_LABEL[s]||s||"—";
+function toast(m,ms=3000){const t=$("toast");t.textContent=m;t.style.display="block";clearTimeout(t._h);t._h=setTimeout(()=>t.style.display="none",ms);}
+
+async function rpc(fn,args){
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`,{method:"POST",
+    headers:{apikey:SUPABASE_ANON_KEY,Authorization:"Bearer "+SUPABASE_ANON_KEY,"content-type":"application/json"},
+    body:JSON.stringify(args||{})});
+  const text = await r.text(); let d=null; try{d=text?JSON.parse(text):null}catch(e){d=text}
+  if(!r.ok){ const m=(d&&(d.message||d.hint))||text||r.status;
+    if(/AUTH:/.test(m)){ hardLogout(); throw new Error("Phiên hết hạn — nhập PIN lại"); }
+    throw new Error(m.replace(/^[A-Z_]+:\s*/,"")); }
+  return d;
+}
+
+/* ---- login ---- */
+$("loginBtn").onclick = doLogin;
+$("pin").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
+async function doLogin(){
+  if(!SALON){ $("loginMsg").textContent="Thiếu mã tiệm trong link (?salon=...)"; return; }
+  $("loginBtn").disabled=true; $("loginMsg").textContent="";
+  try{
+    const res = await rpc("staff_login",{p_salon:SALON,p_pin:$("pin").value.trim()});
+    if(res.status!=="ok"){
+      $("loginMsg").textContent = res.status==="locked"?"Khoá 10 phút (sai PIN nhiều lần)."
+        : res.status==="no_pin"?"Tiệm chưa cài PIN.":`Sai PIN (còn ${res.remaining??"?"} lần).`;
+    }else{
+      TOKEN=res.token; localStorage.setItem("ns_token",TOKEN); localStorage.setItem("ns_salon",SALON);
+      boot();
+    }
+  }catch(e){ $("loginMsg").textContent=e.message; }
+  $("loginBtn").disabled=false;
+}
+function hardLogout(){ TOKEN=null; localStorage.removeItem("ns_token"); clearInterval(timer);
+  $("app").style.display="none"; $("who").style.display="none"; $("login").style.display="block"; }
+$("switchBtn") && ($("switchBtn").onclick = ()=>{ MYID=null; localStorage.removeItem("ns_worker_id"); showWho(); });
+
+async function boot(){
+  $("login").style.display="none";
+  try{ STATE = await rpc("staff_state",{p_token:TOKEN}); }catch(e){ toast(e.message); return; }
+  if(!MYID) return showWho();
+  enter();
+}
+function showWho(){
+  $("app").style.display="none"; $("who").style.display="block";
+  const ws=(STATE.workers||[]).filter(w=>w.role==="worker");
+  $("whoOpts").innerHTML = ws.map(w=>`<button class="opt" data-id="${w.id}">${esc(w.name)}</button>`).join("");
+  $("whoOpts").querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
+    MYID=b.dataset.id; localStorage.setItem("ns_worker_id",MYID); enter();
+  });
+}
+function enter(){
+  $("who").style.display="none"; $("app").style.display="block";
+  render(); clearInterval(timer);
+  timer=setInterval(refresh,5000); setInterval(tick,1000);
+}
+async function refresh(){ if(!TOKEN) return;
+  try{ STATE=await rpc("staff_state",{p_token:TOKEN}); render(); }catch(e){} }
+
+/* ---- render ---- */
+function me(){ return (STATE.workers||[]).find(w=>w.id===MYID); }
+function myJob(){ return (STATE.sessions||[]).find(s=>s.worker_id===MYID && ["pending","in_progress"].includes(s.status)); }
+function myFormDue(){ return (STATE.sessions||[]).find(s=>s.worker_id===MYID && s.needs_post_service); }
+
+function render(){
+  const w = me(); if(!w) return showWho();
+  $("myName").textContent = "💅 " + w.name;
+  $("salonName").textContent = STATE.salon.salon_name||"";
+
+  /* chuông khi có job MỚI gán cho mình (kể cả lúc mới mở trang mà đang có job chờ) */
+  const pj = myJob();
+  if(pj && pj.status==="pending" && pj.id!==lastPendingId){ chime(); lastPendingId = pj.id; }
+  if(!pj) lastPendingId = null;
+
+  /* FORM BẮT BUỘC sau khi Xong: khoá màn cho tới khi điền */
+  const due = myFormDue();
+  if(due){ renderForm(due); $("jobCard").style.display="none"; return; }
+  if(form){ form=null; }
+
+  /* position card */
+  const ws=(STATE.workers||[]).filter(x=>x.role==="worker");
+  const waiting=ws.filter(x=>x.queue_status==="waiting").sort((a,b)=>new Date(a.queued_at)-new Date(b.queued_at));
+  const pos=waiting.findIndex(x=>x.id===MYID)+1;
+  let html="";
+  if(!w.is_checked_in){
+    html=`<div class="big">🌙</div><div class="statusline">Chưa vào ca · not checked in</div>`;
+  }else if(w.is_on_break){
+    html=`<div class="big">☕</div><div class="statusline">Đang nghỉ · on break</div>
+      <div class="countdown" id="brkCount" data-end="${w.break_ends_at||""}">--:--</div>`;
+  }else if(w.queue_status==="assigned"){
+    html=`<div class="big">💼</div><div class="statusline">Bạn đang có khách</div>`;
+  }else if(pos>0){
+    html=`<div class="pos">Lượt #${pos}<span style="font-size:16px;color:var(--muted)"> / ${waiting.length} thợ chờ</span></div>
+      <div class="statusline">${pos===1?"Bạn là người KẾ TIẾP ✨":"Đang chờ tới lượt"}</div>`;
+  }else{
+    html=`<div class="big">⏳</div><div class="statusline">Đã vào ca — chờ vào vòng chia</div>`;
+  }
+  $("stateCard").innerHTML=html;
+
+  /* job card */
+  const j=myJob();
+  if(j){
+    $("jobCard").style.display="block";
+    $("jobCard").innerHTML = j.status==="pending" ? `
+      <div class="meta">🔔 KHÁCH MỚI cho bạn</div>
+      <div class="jobsvc">Ghế ${j.chair} · ${svcName(j.service)}</div>
+      <div class="meta">Khách: ${esc(j.customer||"—")}</div>
+      <div style="height:10px"></div>
+      <button class="btn green" onclick="otw('${j.id}')">🚶 Đang tới · On the way</button>`
+    : `
+      <div class="meta">▶ Đang làm</div>
+      <div class="jobsvc">Ghế ${j.chair} · ${svcName(j.service)}</div>
+      <div class="meta">Khách: ${esc(j.customer||"—")} · bắt đầu lúc ${new Date(j.started_at).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"})}</div>
+      <div style="height:10px"></div>
+      <button class="btn" onclick="done('${j.id}')">✓ Xong · Done</button>`;
+  }else $("jobCard").style.display="none";
+
+  /* actions */
+  let a="";
+  if(!w.is_checked_in){
+    a=`<button class="btn" onclick="act('staff_worker_checkin')">📲 Vào ca · Check in</button>`;
+  }else if(w.is_on_break){
+    a=`<button class="btn green" onclick="act('staff_worker_end_break')">↩ Tôi quay lại · I'm back</button>`;
+  }else{
+    a=`<div class="meta" style="margin-bottom:8px">Nghỉ / ăn (giữ nguyên lượt khi quay lại):</div>
+      <div class="row">
+        <button class="btn ghost" onclick="brk(15)">☕ 15p</button>
+        <button class="btn ghost" onclick="brk(30)">🍜 30p</button>
+        <button class="btn ghost" onclick="brk(60)">🍱 60p</button>
+      </div>
+      <div style="height:10px"></div>
+      <button class="btn warn" onclick="checkout()">🌙 Về / hết ca · Check out</button>`;
+  }
+  $("actionCard").innerHTML=a;
+}
+function tick(){
+  const el=$("brkCount"); if(!el||!el.dataset.end) return;
+  const s=Math.floor((new Date(el.dataset.end)-Date.now())/1000);
+  el.textContent = s>0 ? `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}` : "hết giờ nghỉ!";
+}
+
+/* ---- FORM SAU KHI XONG: màu sơn + 3 câu chấm khách (bắt buộc) ---- */
+const Q = [
+  {k:"a1", t:"1 · Thái độ của khách?", opts:[["easy","😊 Dễ chịu"],["normal","😐 Bình thường"],["difficult","😤 Khó tính"]]},
+  {k:"a2", t:"2 · Mức độ yêu cầu?",    opts:[["easy","🪶 Dễ"],["medium","⚖️ Vừa"],["very_picky","🔍 Rất kỹ"]]},
+  {k:"a3", t:"3 · Lần sau muốn làm cho khách này nữa không?", opts:[["yes","💚 Muốn"],["neutral","🤝 Sao cũng được"],["no","🙅 Ngại"]]}
+];
+function renderForm(s){
+  if(!form || form.sid!==s.id) form={sid:s.id, polishes:[], noPolish:false, a1:null,a2:null,a3:null};
+  $("stateCard").innerHTML = `<div class="big">📝</div>
+    <div class="statusline"><b>Điền 10 giây trước khi đưa QR cho khách</b><br>
+    Ghế ${s.chair} · ${svcName(s.service)} · ${esc(s.customer||"khách")}</div>`;
+  const f=form;
+  $("actionCard").innerHTML = `
+    <div class="meta" style="font-weight:700;margin-bottom:6px">💅 Màu sơn của khách (mã / tên màu)</div>
+    <div class="opts" id="polList">${f.polishes.map((p,i)=>`<span class="pill">${esc(p.code)} <a href="#" onclick="rmPolish(${i});return false" style="color:var(--bad);text-decoration:none"> ✕</a></span>`).join("")||'<span class="meta" style="color:var(--muted)">chưa có màu nào</span>'}</div>
+    <div class="row" style="${f.noPolish?"display:none":""}">
+      <input id="polIn" style="letter-spacing:0;text-align:left;font-size:15px;flex:1" placeholder="vd: OPI A16 đỏ đô"/>
+      <button class="btn ghost" style="width:auto;flex:0 0 auto" onclick="addPolish()">+ Thêm</button>
+    </div>
+    <label class="meta" style="display:block;margin:8px 0">
+      <input type="checkbox" style="width:auto;letter-spacing:0" ${f.noPolish?"checked":""} onchange="form.noPolish=this.checked;renderForm(myFormDue())"/>
+      Khách không sơn (chỉ cắt da / buff / khác)
+    </label>
+    <hr style="border:none;border-top:1px solid var(--line);margin:10px 0"/>
+    ${Q.map(q=>`
+      <div class="meta" style="font-weight:700;margin:8px 0 4px">${q.t}</div>
+      <div class="opts">${q.opts.map(([v,l])=>`<button class="opt ${f[q.k]===v?"sel":""}" onclick="form.${q.k}='${v}';renderForm(myFormDue())">${l}</button>`).join("")}</div>`).join("")}
+    <div style="height:8px"></div>
+    <button class="btn" id="pfGo" ${(f.a1&&f.a2&&f.a3&&(f.noPolish||f.polishes.length))?"":"disabled"} onclick="submitPostService()">✓ Gửi & lấy QR cho khách</button>`;
+  const pin=$("polIn"); if(pin) pin.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();addPolish();}});
+}
+function addPolish(){
+  const v=$("polIn").value.trim(); if(!v) return;
+  form.polishes.push({code:v}); $("polIn").value="";
+  renderForm(myFormDue());
+}
+function rmPolish(i){ form.polishes.splice(i,1); renderForm(myFormDue()); }
+async function submitPostService(){
+  const f=form; if(!f) return;
+  try{
+    const r = await rpc("staff_submit_post_service",{p_token:TOKEN,p_session_id:f.sid,p_worker_id:MYID,
+      p_no_polish:!!f.noPolish, p_polishes:f.polishes, p_attitude:f.a1, p_demand:f.a2, p_serve_again:f.a3});
+    form=null; toast("Đã lưu ✓");
+    if(r&&r.feedback_token){
+      const url=location.href.replace(/worker\.html.*/,`feedback-qr.html?token=${r.feedback_token}`);
+      window.open(url,"_blank");
+    }
+    refresh();
+  }catch(e){ toast(e.message); }
+}
+
+/* ---- actions ---- */
+async function act(fn,extra){ try{ await rpc(fn,Object.assign({p_token:TOKEN,p_worker_id:MYID},extra||{})); refresh(); }catch(e){ toast(e.message); } }
+function brk(m){ act("staff_worker_break",{p_minutes:m}); }
+function checkout(){
+  if(confirm("Hết ca và rời vòng chia turn?")) act("staff_worker_checkout");
+}
+async function otw(sess){ try{ await rpc("staff_on_the_way",{p_token:TOKEN,p_session_id:sess,p_worker_id:MYID}); toast("Đã báo — bắt đầu tính giờ ▶"); refresh(); }catch(e){ toast(e.message); } }
+async function done(sess){
+  try{
+    await rpc("staff_done",{p_token:TOKEN,p_session_id:sess,p_worker_id:MYID});
+    toast("Xong ✓ — điền form 10 giây rồi lấy QR cho khách");
+    refresh();   // form sơn + chấm khách sẽ hiện ra, gửi xong mới có QR
+  }catch(e){ toast(e.message); }
+}
+
+/* ---- boot ---- */
+if(TOKEN&&SALON){ boot(); }
+</script>
+</body>
+</html>

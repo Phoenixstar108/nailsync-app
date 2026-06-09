@@ -1,0 +1,107 @@
+<!doctype html>
+<!-- NailSync Block 1 · KHÁCH GỌI NƯỚC (QR dán ở từng ghế)
+     URL: drink.html?salon=<SALON_ID>&chair=<N>
+     Tự nhận tên khách đang ngồi ghế (qua session đang chạy) — khách chỉ chạm 1 món.
+     Khách quen: hiện "món tủ" lên đầu. Không cần đăng nhập. -->
+<html lang="vi">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Gọi nước · NailSync</title>
+<style>
+  :root{
+    --ink:#2b2026; --ink-soft:#6c5b63; --muted:#a2929a;
+    --rose:#c2185b; --rose-deep:#9d1248; --blush:#fde7ef; --gold:#caa56a;
+    --line:#f1e4ea; --shadow:0 14px 40px -16px rgba(157,18,72,.28);
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:var(--sans);color:var(--ink);background:linear-gradient(180deg,#fff7fb,#fff3f7);min-height:100svh;display:grid;place-items:center;padding:18px}
+  .card{width:min(420px,100%);background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);padding:24px;text-align:center}
+  h1{font-size:20px;color:var(--rose-deep);margin:4px 0 2px}
+  .sub{font-size:13px;color:var(--muted);margin-bottom:14px}
+  .fav{border:2px solid var(--gold);background:#fffaf2;border-radius:16px;padding:14px;margin:10px 0;cursor:pointer}
+  .fav b{color:#9a7b3f}
+  .menu{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:12px 0}
+  .opt{padding:13px 16px;border:1.5px solid var(--line);border-radius:14px;background:#fff;font-size:16px;font-family:inherit;cursor:pointer}
+  .opt.sel{border-color:var(--rose);background:var(--blush);color:var(--rose-deep);font-weight:700}
+  .btn{width:100%;padding:15px;border:none;border-radius:14px;background:var(--rose);color:#fff;font-size:17px;font-weight:700;font-family:inherit;cursor:pointer}
+  .btn:disabled{opacity:.45}
+  input{width:100%;padding:11px;border:1.5px solid var(--line);border-radius:12px;font-size:15px;font-family:inherit;text-align:center}
+  .big{font-size:54px;margin:8px 0}
+</style>
+</head>
+<body>
+<div class="card" id="app">
+  <div class="big">🍹</div>
+  <h1 id="hello">Gọi nước</h1>
+  <div class="sub" id="chairLine">…</div>
+  <div id="favBox"></div>
+  <div class="menu" id="menu"></div>
+  <div id="nameBox" style="display:none;margin:8px 0">
+    <input id="guestName" placeholder="Tên của bạn (không bắt buộc)"/>
+  </div>
+  <button class="btn" id="go" disabled>Gửi order 🛎️</button>
+</div>
+
+<script>
+/* ================= CONFIG ================= */
+const SUPABASE_URL = "https://liavvyeklmixeyudfwxm.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpYXZ2eWVrbG1peGV5dWRmd3htIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODgyOTAsImV4cCI6MjA5NjM2NDI5MH0.vzUiOMRkWYSZ4zGejqKAvq0_-C3YIrM_wa0fTyOmT-E";
+/* ========================================== */
+const qs = new URLSearchParams(location.search);
+const SALON = qs.get("salon"); const CHAIR = parseInt(qs.get("chair")||"0",10);
+let pick=null, ctx=null;
+const $=id=>document.getElementById(id);
+const esc=s=>(s??"").toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+async function rpc(fn,args){
+  const r=await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`,{method:"POST",
+    headers:{apikey:SUPABASE_ANON_KEY,Authorization:"Bearer "+SUPABASE_ANON_KEY,"content-type":"application/json"},
+    body:JSON.stringify(args||{})});
+  const t=await r.text(); let d=null; try{d=t?JSON.parse(t):null}catch(e){d=t}
+  if(!r.ok) throw new Error((d&&(d.message||d.hint))||t||r.status);
+  return d;
+}
+
+function choose(v,el){
+  pick=v; $("go").disabled=false;
+  document.querySelectorAll(".opt,.fav").forEach(x=>x.classList.remove("sel"));
+  if(el) el.classList.add("sel");
+}
+
+async function load(){
+  if(!SALON||!CHAIR){ $("app").innerHTML="<h1>Thiếu mã ghế trong QR</h1>"; return; }
+  try{
+    ctx = await rpc("fn_get_chair_context",{p_salon:SALON,p_chair:CHAIR});
+    $("hello").textContent = ctx.customer_name ? `Chào ${ctx.customer_name}! 🌸` : "Gọi nước nè 🌸";
+    $("chairLine").textContent = `Ghế ${CHAIR} · ${ctx.salon_name||""} — đem tận nơi, khỏi đứng dậy`;
+    if(!ctx.customer_name) $("nameBox").style.display="block";
+    if(ctx.preferred_drink){
+      $("favBox").innerHTML = `<div class="fav" id="fav">⭐ <b>Như mọi lần: ${esc(ctx.preferred_drink)}?</b><br><span style="font-size:12.5px;color:var(--muted)">chạm để chọn món tủ của bạn</span></div>`;
+      $("fav").onclick = ()=>choose(ctx.preferred_drink, $("fav"));
+    }
+    $("menu").innerHTML = (ctx.menu||[]).map(m=>`<button class="opt" data-d="${esc(m)}">${esc(m)}</button>`).join("");
+    $("menu").querySelectorAll(".opt").forEach(b=>b.onclick=()=>choose(b.dataset.d,b));
+  }catch(e){ $("app").innerHTML=`<h1>Không tải được menu</h1><div class="sub">${esc(e.message)}</div>`; }
+}
+
+$("go").onclick = async ()=>{
+  if(!pick) return;
+  $("go").disabled=true; $("go").textContent="Đang gửi…";
+  try{
+    const r = await rpc("fn_order_drink",{p_salon:SALON,p_chair:CHAIR,p_drink:pick,
+      p_display_name: $("guestName").value.trim()||null});
+    if(r.status==="too_many"){
+      $("app").innerHTML=`<div class="big">🫶</div><h1>Từ từ nha!</h1><div class="sub">${esc(r.message)}</div>`;
+    }else{
+      $("app").innerHTML=`<div class="big">🍹</div><h1>Đã gọi ${esc(pick)}!</h1>
+        <div class="sub">Quầy nước nhận rồi — đem tới ghế ${CHAIR} liền. Cứ thư giãn nhé 💆</div>`;
+    }
+  }catch(e){ $("go").disabled=false; $("go").textContent="Gửi order 🛎️"; alert("Gửi không được: "+e.message); }
+};
+
+load();
+</script>
+</body>
+</html>

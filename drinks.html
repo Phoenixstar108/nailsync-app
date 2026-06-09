@@ -1,0 +1,183 @@
+<!doctype html>
+<!-- NailSync Block 1 · MÀN QUẦY NƯỚC (drink station)
+     URL: drinks.html?salon=<SALON_ID>  · đăng nhập PIN nhân viên (như lễ tân/thợ).
+     Poll staff_drink_queue 5s; chuông khi order mới; ✓ Đã đem / Huỷ; + order tay. -->
+<html lang="vi">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>NailSync — Quầy nước</title>
+<style>
+  :root{
+    --ink:#2b2026; --ink-soft:#6c5b63; --muted:#a2929a;
+    --rose:#c2185b; --rose-deep:#9d1248; --blush:#fde7ef; --gold:#caa56a;
+    --line:#f1e4ea; --ok:#2e7d32; --bad:#c62828;
+    --shadow:0 10px 30px -14px rgba(157,18,72,.25);
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:var(--sans);color:var(--ink);background:linear-gradient(180deg,#fff7fb,#fff3f7);min-height:100vh}
+  header{display:flex;align-items:center;gap:10px;padding:10px 16px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0}
+  header h1{font-size:17px;margin:0;color:var(--rose-deep)}
+  .spacer{flex:1}
+  .chip{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--blush);color:var(--rose-deep);border:1px solid var(--line)}
+  button{font-family:inherit;cursor:pointer;border:none;border-radius:12px;font-size:14px}
+  .btn{padding:10px 14px;background:var(--rose);color:#fff;font-weight:600}
+  .btn:disabled{opacity:.45}
+  .btn.ghost{background:#fff;color:var(--rose-deep);border:1px solid var(--line)}
+  .btn.green{background:var(--ok)}
+  main{max-width:560px;margin:0 auto;padding:14px 16px 90px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px}
+  .chair{font-size:24px;font-weight:800;color:var(--rose-deep);min-width:74px;text-align:center;background:var(--blush);border-radius:12px;padding:10px 4px}
+  .drink{font-size:18px;font-weight:700}
+  .meta{font-size:12.5px;color:var(--ink-soft)}
+  .empty{color:var(--muted);font-size:14px;padding:30px;text-align:center;border:1.5px dashed var(--line);border-radius:18px}
+  #login{max-width:380px;margin:8vh auto;background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);padding:26px;text-align:center}
+  #login h1{color:var(--rose-deep);font-size:20px;margin:0 0 4px}
+  #login p{color:var(--muted);font-size:13px;margin:0 0 16px}
+  #login input{width:100%;padding:12px;border:1.5px solid var(--line);border-radius:14px;font-size:22px;text-align:center;letter-spacing:.4em;font-family:inherit}
+  #ovl{position:fixed;inset:0;background:rgba(43,32,38,.45);display:none;align-items:flex-end;justify-content:center;z-index:50}
+  #ovl.on{display:flex}
+  #modal{background:#fff;border-radius:20px 20px 0 0;width:min(520px,100%);max-height:85vh;overflow:auto;padding:18px}
+  .opts{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+  .opt{padding:10px 13px;border:1.5px solid var(--line);border-radius:12px;background:#fff;font-size:14px}
+  .opt.sel{border-color:var(--rose);background:var(--blush);color:var(--rose-deep);font-weight:700}
+  #modal input{width:100%;padding:10px;border:1.5px solid var(--line);border-radius:12px;font-size:15px;font-family:inherit;margin:6px 0}
+  #toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:12px;font-size:14px;display:none;z-index:99}
+</style>
+</head>
+<body>
+
+<div id="login">
+  <h1>🧋 NailSync — Quầy nước</h1>
+  <p>Nhập mã PIN của tiệm</p>
+  <input id="pin" type="password" inputmode="numeric" placeholder="••••" maxlength="12"/>
+  <div style="height:12px"></div>
+  <button class="btn" style="width:100%" id="loginBtn">Vào</button>
+  <p id="loginMsg" style="color:var(--bad);min-height:18px;font-size:13px"></p>
+</div>
+
+<div id="app" style="display:none">
+  <header>
+    <h1>🧋 Quầy nước</h1>
+    <span class="chip" id="doneChip">hôm nay: 0 ly</span>
+    <div class="spacer"></div>
+    <button class="btn ghost" id="addBtn">+ Order tay</button>
+  </header>
+  <main id="list"></main>
+</div>
+
+<div id="ovl"><div id="modal"></div></div>
+<div id="toast"></div>
+
+<script>
+/* ================= CONFIG ================= */
+const SUPABASE_URL = "https://liavvyeklmixeyudfwxm.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpYXZ2eWVrbG1peGV5dWRmd3htIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODgyOTAsImV4cCI6MjA5NjM2NDI5MH0.vzUiOMRkWYSZ4zGejqKAvq0_-C3YIrM_wa0fTyOmT-E";
+/* ========================================== */
+const qs=new URLSearchParams(location.search);
+const SALON=qs.get("salon")||localStorage.getItem("ns_salon")||"";
+let TOKEN=localStorage.getItem("ns_token")||null;
+let DATA=null,timer=null,knownIds=new Set(),firstLoad=true;
+const $=id=>document.getElementById(id);
+const esc=s=>(s??"").toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(m,ms=2800){const t=$("toast");t.textContent=m;t.style.display="block";clearTimeout(t._h);t._h=setTimeout(()=>t.style.display="none",ms);}
+
+let AC=null;
+document.addEventListener("click",()=>{try{if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume();}catch(e){}});
+function chime(){
+  try{ if(!AC) return;
+    [0,.3].forEach(t=>{const o=AC.createOscillator(),g=AC.createGain();o.connect(g);g.connect(AC.destination);
+      o.frequency.value=1175;g.gain.setValueAtTime(.0001,AC.currentTime+t);
+      g.gain.exponentialRampToValueAtTime(.35,AC.currentTime+t+.02);
+      g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+t+.28);
+      o.start(AC.currentTime+t);o.stop(AC.currentTime+t+.3);});
+  }catch(e){}
+}
+
+async function rpc(fn,args){
+  const r=await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`,{method:"POST",
+    headers:{apikey:SUPABASE_ANON_KEY,Authorization:"Bearer "+SUPABASE_ANON_KEY,"content-type":"application/json"},
+    body:JSON.stringify(args||{})});
+  const t=await r.text(); let d=null; try{d=t?JSON.parse(t):null}catch(e){d=t}
+  if(!r.ok){const m=(d&&(d.message||d.hint))||t||r.status;
+    if(/AUTH:/.test(m)){TOKEN=null;localStorage.removeItem("ns_token");clearInterval(timer);$("app").style.display="none";$("login").style.display="block";throw new Error("Phiên hết hạn — nhập PIN lại");}
+    throw new Error(m.replace(/^[A-Z_]+:\s*/,""));}
+  return d;
+}
+
+$("loginBtn").onclick=doLogin;
+$("pin").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
+async function doLogin(){
+  if(!SALON){$("loginMsg").textContent="Thiếu mã tiệm trong link (?salon=...)";return;}
+  $("loginBtn").disabled=true;$("loginMsg").textContent="";
+  try{
+    const res=await rpc("staff_login",{p_salon:SALON,p_pin:$("pin").value.trim()});
+    if(res.status!=="ok"){
+      $("loginMsg").textContent=res.status==="locked"?"Khoá 10 phút (sai PIN nhiều lần).":res.status==="no_pin"?"Tiệm chưa cài PIN.":`Sai PIN (còn ${res.remaining??"?"} lần).`;
+    }else{TOKEN=res.token;localStorage.setItem("ns_token",TOKEN);localStorage.setItem("ns_salon",SALON);enter();}
+  }catch(e){$("loginMsg").textContent=e.message;}
+  $("loginBtn").disabled=false;
+}
+function enter(){
+  $("login").style.display="none";$("app").style.display="block";
+  refresh();clearInterval(timer);timer=setInterval(refresh,5000);
+}
+
+function ago(ts){const m=Math.floor((Date.now()-new Date(ts))/60000);return m<1?"vừa gọi":m+" phút trước";}
+
+async function refresh(){
+  if(!TOKEN)return;
+  try{DATA=await rpc("staff_drink_queue",{p_token:TOKEN});}catch(e){return;}
+  const q=DATA.queue||[];
+  const fresh=q.filter(o=>!knownIds.has(o.id));
+  if(!firstLoad && fresh.length) chime();
+  q.forEach(o=>knownIds.add(o.id)); firstLoad=false;
+  $("doneChip").textContent=`hôm nay: ${DATA.delivered_today||0} ly`;
+  $("list").innerHTML=q.length?q.map(o=>`
+    <div class="card">
+      <div class="chair">Ghế<br>${o.chair}</div>
+      <div style="flex:1">
+        <div class="drink">${esc(o.drink)}</div>
+        <div class="meta">${esc(o.customer||"khách")} · ${ago(o.ordered_at)}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button class="btn green" onclick="upd('${o.id}','delivered')">✓ Đã đem</button>
+        <button class="btn ghost" onclick="upd('${o.id}','cancelled')">Huỷ</button>
+      </div>
+    </div>`).join(""):`<div class="empty">Chưa có order nào 🧘<br><span style="font-size:12px">khách quét QR ở ghế là hiện lên đây</span></div>`;
+}
+async function upd(id,st){
+  try{await rpc("staff_drink_update",{p_token:TOKEN,p_order_id:id,p_status:st});refresh();}
+  catch(e){toast(e.message);}
+}
+
+/* order tay */
+$("addBtn").onclick=()=>{
+  let chair=null,drink=null;
+  const menu=DATA?.menu||[],n=DATA?.station_count||10;
+  $("modal").innerHTML=`<h3 style="margin:0 0 10px;color:var(--rose-deep)">+ Order tay</h3>
+    <div class="meta" style="font-weight:700">Ghế</div>
+    <div class="opts" id="mC">${Array.from({length:n},(_,i)=>i+1).map(c=>`<button class="opt" data-c="${c}">${c}</button>`).join("")}</div>
+    <div class="meta" style="font-weight:700">Món</div>
+    <div class="opts" id="mD">${menu.map(m=>`<button class="opt" data-d="${esc(m)}">${esc(m)}</button>`).join("")}</div>
+    <input id="mN" placeholder="Tên khách (không bắt buộc)"/>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+      <button class="btn ghost" onclick="document.getElementById('ovl').classList.remove('on')">Đóng</button>
+      <button class="btn" id="mGo">Gửi</button>
+    </div>`;
+  $("ovl").classList.add("on");
+  const sel=(box,attr,cb)=>$(box).querySelectorAll(".opt").forEach(b=>b.onclick=()=>{$(box).querySelectorAll(".opt").forEach(x=>x.classList.remove("sel"));b.classList.add("sel");cb(b.dataset[attr]);});
+  sel("mC","c",v=>chair=parseInt(v,10)); sel("mD","d",v=>drink=v);
+  $("mGo").onclick=async()=>{
+    if(!chair||!drink)return toast("Chọn ghế + món");
+    try{await rpc("staff_drink_manual",{p_token:TOKEN,p_chair:chair,p_drink:drink,p_name:$("mN").value.trim()||null});
+      $("ovl").classList.remove("on");refresh();}catch(e){toast(e.message);}
+  };
+};
+$("ovl").addEventListener("click",e=>{if(e.target.id==="ovl")$("ovl").classList.remove("on");});
+
+if(TOKEN&&SALON){enter();}
+</script>
+</body>
+</html>

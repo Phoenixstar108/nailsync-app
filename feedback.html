@@ -1,0 +1,208 @@
+<!doctype html>
+<!-- NailSync Block 1 · web_v2 — Customer feedback (redesigned).
+     Bilingual EN/VI · self-contained. Keeps the EXACT RPC wiring
+     (fn_get_feedback_context, fn_submit_feedback) from web/feedback.html.
+     URL: feedback.html?token=<room_sessions.feedback_link_token>.  Preview → add &demo=1 -->
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>NailSync — Feedback</title>
+<style>
+  :root{
+    --ink:#2b2026; --ink-soft:#6c5b63; --muted:#a2929a;
+    --rose:#c2185b; --rose-deep:#9d1248; --gold:#e7b765;
+    --line:#f1e4ea; --card:#fff;
+    --shadow:0 18px 50px -18px rgba(157,18,72,.30); --radius:28px;
+    --serif:'Cambria','Times New Roman','Noto Serif',serif;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0}
+  body{font-family:var(--sans);color:var(--ink);min-height:100svh;display:grid;place-items:center;padding:22px 16px;position:relative;overflow-x:hidden;
+    background:
+      radial-gradient(120% 80% at 15% -5%, #fff2f7 0%, rgba(255,242,247,0) 55%),
+      radial-gradient(110% 70% at 95% 0%, #fbeede 0%, rgba(251,238,222,0) 50%),
+      radial-gradient(140% 100% at 50% 110%, #fde3ee 0%, rgba(253,227,238,0) 55%),
+      linear-gradient(180deg,#fff7fb 0%,#fff3f7 100%);}
+  body::before,body::after{content:"";position:fixed;border-radius:50%;filter:blur(60px);opacity:.5;z-index:0;pointer-events:none}
+  body::before{width:300px;height:300px;left:-90px;top:-60px;background:radial-gradient(circle,#f7b8d2,transparent 70%)}
+  body::after{width:340px;height:340px;right:-110px;bottom:-90px;background:radial-gradient(circle,#f3d39e,transparent 70%)}
+  .stage{width:min(444px,100%);position:relative;z-index:1}
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin:0 4px 16px}
+  .logo{display:flex;align-items:center;gap:10px}
+  .mark{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(145deg,#e23a7e,#9d1248);box-shadow:0 8px 20px -8px rgba(157,18,72,.6)}
+  .mark svg{width:22px;height:22px}
+  .wordmark{font-family:var(--serif);font-size:21px;letter-spacing:.3px;font-weight:600;color:#3a2630}
+  .wordmark b{color:var(--rose)}
+  .lang{display:inline-flex;background:#fff;border:1px solid var(--line);border-radius:999px;padding:3px;box-shadow:var(--shadow)}
+  .lang button{border:0;background:transparent;font:600 12.5px var(--sans);color:var(--muted);padding:5px 11px;border-radius:999px;cursor:pointer}
+  .lang button.on{background:linear-gradient(145deg,#e23a7e,#b3164e);color:#fff}
+
+  .card{background:var(--card);border:1px solid #fbeef3;border-radius:var(--radius);box-shadow:var(--shadow);padding:28px 22px 24px;text-align:center;position:relative;overflow:hidden;animation:rise .6s cubic-bezier(.2,.7,.3,1) both}
+  .card::before{content:"";position:absolute;inset:0 0 auto 0;height:130px;background:linear-gradient(180deg,#fff6fa,transparent)}
+  .halo{width:78px;height:78px;border-radius:50%;margin:2px auto 14px;display:grid;place-items:center;position:relative;background:radial-gradient(circle at 30% 25%,#fde3ee,#f8c6dc);box-shadow:inset 0 0 0 1px #fff,0 12px 26px -12px rgba(194,24,91,.5)}
+  .halo svg{width:34px;height:34px;stroke:var(--rose-deep);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  h1{font-family:var(--serif);font-weight:600;font-size:24px;margin:0 0 5px;color:#34222c}
+  .ctx{color:var(--ink-soft);font-size:13.5px;margin:0 0 4px;min-height:18px}
+  .ctx b{color:var(--rose-deep);font-weight:600}
+  .stars{display:flex;justify-content:center;gap:7px;margin:18px 0 6px}
+  .stars button{border:0;background:transparent;padding:4px;cursor:pointer;transition:transform .12s}
+  .stars button:active{transform:scale(.85)}
+  .stars svg{width:42px;height:42px;fill:#ecdfe5;transition:fill .15s,transform .15s}
+  .stars button.on svg{fill:url(#g);transform:scale(1.05);filter:drop-shadow(0 4px 8px rgba(231,183,101,.5))}
+  .rlabel{font-weight:600;font-size:15px;color:var(--rose-deep);min-height:22px;margin:2px 0 4px;letter-spacing:.2px}
+  textarea{width:100%;font:15px var(--sans);color:var(--ink);padding:13px 14px;border:1.5px solid var(--line);border-radius:16px;background:#fffdfe;min-height:84px;resize:vertical;margin:12px 0 2px;transition:.2s}
+  textarea::placeholder{color:#bcaeb5}
+  textarea:focus{outline:0;border-color:#f1a6c4;box-shadow:0 0 0 4px rgba(216,27,96,.10);background:#fff}
+  .cta{width:100%;margin-top:14px;font:650 16.5px var(--sans);color:#fff;border:0;border-radius:16px;padding:16px;cursor:pointer;background:linear-gradient(145deg,#e23a7e,#b3164e);box-shadow:0 14px 28px -12px rgba(179,22,78,.65);transition:transform .15s,opacity .2s;display:flex;align-items:center;justify-content:center;gap:9px}
+  .cta:active{transform:translateY(1px) scale(.99)}
+  .cta:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+  .cta svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .err{color:#c0143f;font-size:12.5px;margin-top:10px;min-height:16px}
+  .footer{text-align:center;color:#c2b2ba;font-size:11px;margin:16px 0 0}
+
+  .done{padding:14px 6px 6px;animation:rise .5s ease both}
+  .bighe{font-size:60px;line-height:1;margin:6px 0 10px;position:relative;display:inline-block;animation:pop .6s cubic-bezier(.2,1.4,.4,1) both}
+  .spark{position:absolute;color:#e7b765;opacity:0;animation:burst 1s .3s ease forwards}
+  @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  @keyframes pop{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:scale(1)}}
+  @keyframes burst{0%{opacity:0;transform:scale(.3)}40%{opacity:1}100%{opacity:0;transform:scale(1.6) translateY(-12px)}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6c451"/><stop offset="1" stop-color="#e79a3c"/></linearGradient></defs></svg>
+<div class="stage">
+  <div class="topbar">
+    <div class="logo">
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none"><rect x="9.5" y="2" width="5" height="2.3" rx="1.1" fill="#fff"/><path d="M9 4.6h6v2.1c0 .5.2 1 .6 1.3l1 .9c.6.5.9 1.2.9 2V19a1.6 1.6 0 0 1-1.6 1.6H8.1A1.6 1.6 0 0 1 6.5 19v-8.1c0-.8.3-1.5.9-2l1-.9c.4-.3.6-.8.6-1.3V4.6Z" fill="#fff"/><rect x="8.2" y="12.3" width="7.6" height="4.4" rx="1.1" fill="#c2185b"/></svg></div>
+      <div class="wordmark">Nail<b>Sync</b></div>
+    </div>
+    <div class="lang" role="group" aria-label="Language">
+      <button id="en" class="on" onclick="setLang('en')">EN</button>
+      <button id="vi" onclick="setLang('vi')">VI</button>
+    </div>
+  </div>
+
+  <div class="card" id="card">
+    <div class="halo"><svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.3 6.8.7-5.1 4.6 1.5 6.7L12 18l-6 2.8 1.5-6.7-5.1-4.6 6.8-.7z"/></svg></div>
+    <h1 data-i18n="title">How was your visit?</h1>
+    <p class="ctx" id="ctx" data-i18n="tapToRate">Tap a star to rate</p>
+
+    <div class="stars" id="stars">
+      <button data-v="1"><svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.3 6.8.7-5.1 4.6 1.5 6.7L12 18l-6 2.8 1.5-6.7-5.1-4.6 6.8-.7z"/></svg></button>
+      <button data-v="2"><svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.3 6.8.7-5.1 4.6 1.5 6.7L12 18l-6 2.8 1.5-6.7-5.1-4.6 6.8-.7z"/></svg></button>
+      <button data-v="3"><svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.3 6.8.7-5.1 4.6 1.5 6.7L12 18l-6 2.8 1.5-6.7-5.1-4.6 6.8-.7z"/></svg></button>
+      <button data-v="4"><svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.3 6.8.7-5.1 4.6 1.5 6.7L12 18l-6 2.8 1.5-6.7-5.1-4.6 6.8-.7z"/></svg></button>
+      <button data-v="5"><svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.3 6.8.7-5.1 4.6 1.5 6.7L12 18l-6 2.8 1.5-6.7-5.1-4.6 6.8-.7z"/></svg></button>
+    </div>
+    <div class="rlabel" id="rlabel"></div>
+
+    <textarea id="comment" data-i18n-ph="commentPh" placeholder="Anything you'd like us to know? (optional)"></textarea>
+    <button class="cta" id="go" disabled>
+      <span data-i18n="submit">Submit</span>
+      <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </button>
+    <div class="err" id="err"></div>
+  </div>
+  <div class="footer" data-i18n="footer">Powered by NailSync</div>
+</div>
+
+<script>
+/* ---- fill these in for the pilot salon (same as the original page) ---- */
+const SUPABASE_URL = "https://liavvyeklmixeyudfwxm.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpYXZ2eWVrbG1peGV5dWRmd3htIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODgyOTAsImV4cCI6MjA5NjM2NDI5MH0.vzUiOMRkWYSZ4zGejqKAvq0_-C3YIrM_wa0fTyOmT-E";
+/* ---------------------------------------------------------------------- */
+
+const SVC={ en:{hands:'Manicure',feet:'Pedicure',mani:'Manicure',pedi:'Pedicure',both:'Mani + Pedi',powder:'Powder / Acrylic',full_set:'Full set',fill:'Fill',design:'Nail art'},
+            vi:{hands:'Làm móng tay',feet:'Làm móng chân',mani:'Làm móng tay',pedi:'Làm móng chân',both:'Tay + Chân',powder:'Bột / Acrylic',full_set:'Full set',fill:'Fill',design:'Vẽ móng'} };
+const I18N={
+  en:{ title:'How was your visit?', tapToRate:'Tap a star to rate', commentPh:"Anything you'd like us to know? (optional)",
+    submit:'Submit', footer:'Powered by NailSync', sending:'Sending…', failed:'Could not send. Please try again.',
+    withWho:(s,w)=>`${s}${w?` · with <b>${w}</b>`:''}`,
+    labels:['','We let you down','Could be better','It was okay','Really good!','Absolutely loved it!'],
+    thanksHi:'Thank you!', thanksLo:'Thank you', byeHi:'We loved having you — see you next time 💕', byeLo:"Thank you for the honest feedback — we'll make it right." },
+  vi:{ title:'Buổi làm của bạn thế nào?', tapToRate:'Chạm vào sao để đánh giá', commentPh:'Bạn muốn nhắn gì cho tiệm? (không bắt buộc)',
+    submit:'Gửi', footer:'Vận hành bởi NailSync', sending:'Đang gửi…', failed:'Gửi không được. Vui lòng thử lại.',
+    withWho:(s,w)=>`${s}${w?` · cùng <b>${w}</b>`:''}`,
+    labels:['','Chưa hài lòng','Có thể tốt hơn','Tạm ổn','Rất tốt!','Tuyệt vời, mê luôn!'],
+    thanksHi:'Cảm ơn bạn!', thanksLo:'Cảm ơn bạn', byeHi:'Rất vui được phục vụ bạn — hẹn gặp lại 💕', byeLo:'Cảm ơn góp ý thẳng thắn — tụi mình sẽ làm tốt hơn.' }
+};
+const params=new URLSearchParams(location.search);
+const token=params.get('token');
+const DEMO=params.get('demo')==='1';
+let lang=localStorage.getItem('ns_lang')||(navigator.language||'en').slice(0,2).toLowerCase();
+if(!I18N[lang]) lang='en';
+let rating=0, ctxRaw={service:null,worker:null};
+
+const T=()=>I18N[lang]||I18N.en;
+function applyLang(){
+  document.documentElement.lang=lang;
+  document.querySelectorAll('[data-i18n]').forEach(el=>el.innerHTML=T()[el.dataset.i18n]);
+  document.querySelectorAll('[data-i18n-ph]').forEach(el=>el.placeholder=T()[el.dataset.i18nPh]);
+  document.getElementById('en').classList.toggle('on',lang==='en');
+  document.getElementById('vi').classList.toggle('on',lang==='vi');
+  renderCtx(); renderLabel();
+}
+function setLang(l){ lang=l; localStorage.setItem('ns_lang',l); applyLang(); }
+
+function renderCtx(){
+  const ctx=document.getElementById('ctx'); if(!ctx) return;
+  if(ctxRaw.service){
+    const s=(SVC[lang]&&SVC[lang][ctxRaw.service])||ctxRaw.service;
+    ctx.innerHTML=T().withWho(s,ctxRaw.worker||'');
+  } else { ctx.textContent=T().tapToRate; }
+}
+function renderLabel(){ const el=document.getElementById('rlabel'); if(el) el.textContent=rating?T().labels[rating]:''; }
+
+const stars=document.getElementById('stars'), go=document.getElementById('go'), err=document.getElementById('err');
+function paint(){ stars.querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.v<=rating)); }
+stars.querySelectorAll('button').forEach(b=>b.onclick=()=>{ rating=+b.dataset.v; paint(); renderLabel(); go.disabled=false; err.textContent=''; });
+
+// load context (what am I rating?)
+(async()=>{
+  if(DEMO){ ctxRaw={service:'feet',worker:'Anna'}; renderCtx(); return; }
+  if(!token) return;
+  try{
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/rpc/fn_get_feedback_context`,{
+      method:'POST', headers:{ apikey:SUPABASE_ANON_KEY, Authorization:'Bearer '+SUPABASE_ANON_KEY, 'content-type':'application/json' },
+      body:JSON.stringify({ p_token:token }) });
+    const rows=await r.json(); const c=Array.isArray(rows)?rows[0]:rows;
+    if(c&&c.service_type){ ctxRaw={service:c.service_type,worker:c.worker_name||null}; renderCtx(); }
+  }catch(_e){}
+})();
+
+go.onclick=async()=>{
+  if(!rating) return;
+  if(!token && !DEMO){ err.textContent='Missing feedback code.'; return; }
+  go.disabled=true; go.querySelector('span').textContent=T().sending; err.textContent='';
+  const comment=document.getElementById('comment').value.trim()||null;
+  if(DEMO){ setTimeout(()=>showThanks(),600); return; }
+  try{
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/rpc/fn_submit_feedback`,{
+      method:'POST', headers:{ apikey:SUPABASE_ANON_KEY, Authorization:'Bearer '+SUPABASE_ANON_KEY, 'content-type':'application/json' },
+      body:JSON.stringify({ p_token:token, p_rating:rating, p_comment:comment }) });
+    if(!r.ok) throw new Error(await r.text());
+    showThanks();
+  }catch(e){ go.disabled=false; go.querySelector('span').textContent=T().submit; err.textContent=T().failed; }
+};
+
+function showThanks(){
+  const hi=rating>=4;
+  document.getElementById('card').innerHTML=`
+    <div class="done">
+      <div class="bighe">${hi?'💖':'🌷'}
+        <span class="spark" style="top:-4px;left:-10px">✦</span>
+        <span class="spark" style="top:0;right:-8px;animation-delay:.5s">✦</span>
+        <span class="spark" style="bottom:0;left:6px;animation-delay:.7s">✧</span>
+      </div>
+      <h1>${hi?T().thanksHi:T().thanksLo}</h1>
+      <p class="ctx">${hi?T().byeHi:T().byeLo}</p>
+    </div>`;
+}
+
+applyLang();
+</script>
+</body>
+</html>

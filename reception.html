@@ -1,0 +1,475 @@
+<!doctype html>
+<!-- NailSync Block 1 · MÀN LỄ TÂN (reception console)
+     Tablet-first · bilingual VI/EN · self-contained (no external assets).
+     Auth: salon PIN -> staff_login -> token (localStorage) -> staff_* RPCs.
+     URL: reception.html?salon=<SALON_ID>     Poll: staff_state 5s, flag_timeouts 30s. -->
+<html lang="vi">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>NailSync — Lễ tân</title>
+<style>
+  :root{
+    --ink:#2b2026; --ink-soft:#6c5b63; --muted:#a2929a;
+    --rose:#c2185b; --rose-deep:#9d1248; --blush:#fde7ef; --cream:#fffafc;
+    --gold:#caa56a; --line:#f1e4ea; --card:#fff;
+    --ok:#2e7d32; --warn:#e65100; --bad:#c62828;
+    --shadow:0 10px 30px -14px rgba(157,18,72,.25); --radius:16px;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:var(--sans);color:var(--ink);background:linear-gradient(180deg,#fff7fb,#fff3f7);min-height:100vh}
+  header{display:flex;align-items:center;gap:10px;padding:10px 16px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+  header h1{font-size:17px;margin:0;color:var(--rose-deep)}
+  header .sub{font-size:12px;color:var(--muted)}
+  .spacer{flex:1}
+  .chip{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--blush);color:var(--rose-deep);border:1px solid var(--line)}
+  button{font-family:inherit;cursor:pointer;border:none;border-radius:12px;font-size:14px}
+  .btn{padding:10px 14px;background:var(--rose);color:#fff;font-weight:600}
+  .btn:disabled{opacity:.45;cursor:default}
+  .btn.ghost{background:#fff;color:var(--rose-deep);border:1px solid var(--line)}
+  .btn.warn{background:var(--bad)}
+  .btn.small{padding:6px 10px;font-size:13px}
+  /* rotation bar */
+  #rotation{display:flex;gap:8px;overflow-x:auto;padding:10px 16px}
+  .wk{flex:0 0 auto;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 12px;min-width:110px}
+  .wk .nm{font-weight:700;font-size:14px}
+  .wk .st{font-size:11.5px;margin-top:2px}
+  .st.waiting{color:var(--ok)} .st.assigned{color:var(--warn)} .st.on_break{color:#7b1fa2} .st.off{color:var(--muted)}
+  .wk .pos{float:right;font-size:11px;color:var(--gold);font-weight:700}
+  /* columns */
+  main{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:12px;padding:0 16px 80px;align-items:start}
+  @media(max-width:900px){main{grid-template-columns:1fr}}
+  section h2{font-size:14px;color:var(--ink-soft);margin:14px 2px 8px;text-transform:uppercase;letter-spacing:.06em}
+  section h2 .n{display:inline-block;min-width:20px;text-align:center;background:var(--rose);color:#fff;border-radius:999px;font-size:12px;padding:1px 6px;margin-left:6px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px;margin-bottom:10px}
+  .card.flag{border:2px solid var(--bad);background:#fff5f5}
+  .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .who{font-weight:700;font-size:15px}
+  .meta{font-size:12.5px;color:var(--ink-soft)}
+  .badge{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);background:var(--cream);color:var(--ink-soft)}
+  .badge.appt{background:#e8f0fe;color:#1a56b8;border-color:#cfe0fb}
+  .badge.req{background:#fff3e0;color:#b35a00;border-color:#ffe0b2}
+  .badge.svc{background:var(--blush);color:var(--rose-deep)}
+  .actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .count{font-variant-numeric:tabular-nums;font-weight:700}
+  .count.late{color:var(--bad)}
+  .empty{color:var(--muted);font-size:13px;padding:14px;text-align:center;border:1.5px dashed var(--line);border-radius:var(--radius)}
+  /* modal */
+  #ovl{position:fixed;inset:0;background:rgba(43,32,38,.45);display:none;align-items:flex-end;justify-content:center;z-index:50}
+  #ovl.on{display:flex}
+  #modal{background:#fff;border-radius:20px 20px 0 0;width:min(560px,100%);max-height:88vh;overflow:auto;padding:18px}
+  #modal h3{margin:0 0 4px;font-size:17px;color:var(--rose-deep)}
+  #modal .sub{font-size:12.5px;color:var(--muted);margin-bottom:12px}
+  .opts{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+  .opt{padding:9px 13px;border:1.5px solid var(--line);border-radius:12px;background:#fff;font-size:14px}
+  .opt.sel{border-color:var(--rose);background:var(--blush);color:var(--rose-deep);font-weight:700}
+  .opt:disabled{opacity:.35}
+  textarea,input[type=text],input[type=password]{width:100%;padding:10px;border:1.5px solid var(--line);border-radius:12px;font-size:15px;font-family:inherit}
+  .mrow{margin:12px 0}
+  .mlabel{font-size:13px;font-weight:700;color:var(--ink-soft);margin-bottom:6px}
+  /* login */
+  #login{max-width:380px;margin:8vh auto;background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);padding:26px;text-align:center}
+  #login h1{color:var(--rose-deep);font-size:20px;margin:0 0 4px}
+  #login p{color:var(--muted);font-size:13px;margin:0 0 16px}
+  #login input{text-align:center;font-size:22px;letter-spacing:.4em}
+  #toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:12px;font-size:14px;display:none;z-index:99;max-width:90vw}
+  .muted{color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div id="login">
+  <h1>🌸 NailSync — Lễ tân</h1>
+  <p>Nhập mã PIN của tiệm · Enter the salon staff PIN</p>
+  <input id="pin" type="password" inputmode="numeric" placeholder="••••" maxlength="12"/>
+  <div style="height:12px"></div>
+  <button class="btn" style="width:100%" id="loginBtn">Đăng nhập · Sign in</button>
+  <p id="loginMsg" style="color:var(--bad);min-height:18px"></p>
+</div>
+
+<div id="app" style="display:none">
+  <header>
+    <div><h1 id="salonName">NailSync</h1><div class="sub">Màn lễ tân · Reception</div></div>
+    <div class="spacer"></div>
+    <span class="chip" id="meChip" title="Người thao tác">👤 …</span>
+    <button class="btn ghost small" id="logoutBtn">Thoát</button>
+  </header>
+
+  <div id="rotation"></div>
+
+  <main>
+    <section>
+      <h2>🟡 Chờ xác nhận <span class="muted">· pending</span><span class="n" id="nPending">0</span></h2>
+      <div id="colPending"></div>
+    </section>
+    <section>
+      <h2>🟢 Sẵn sàng gán thợ <span class="muted">· ready</span><span class="n" id="nReady">0</span></h2>
+      <div id="colReady"></div>
+    </section>
+    <section>
+      <h2>💅 Đang phục vụ <span class="muted">· on the floor</span><span class="n" id="nFloor">0</span></h2>
+      <div id="colFloor"></div>
+      <h2 style="margin-top:18px">✅ Xong hôm nay <span class="n" id="nDone">0</span></h2>
+      <div id="colDone"></div>
+    </section>
+  </main>
+</div>
+
+<div id="ovl"><div id="modal"></div></div>
+<div id="toast"></div>
+
+<script>
+/* ================= CONFIG ================= */
+const SUPABASE_URL = "https://liavvyeklmixeyudfwxm.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpYXZ2eWVrbG1peGV5dWRmd3htIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODgyOTAsImV4cCI6MjA5NjM2NDI5MH0.vzUiOMRkWYSZ4zGejqKAvq0_-C3YIrM_wa0fTyOmT-E";
+/* ========================================== */
+const qs = new URLSearchParams(location.search);
+const SALON = qs.get("salon") || localStorage.getItem("ns_salon") || "";
+const SVC_LABEL = {hands:"Tay · Hands", feet:"Chân · Feet", mani:"Mani", pedi:"Pedi",
+  powder:"Bột · Powder", full_set:"Full set", fill:"Fill", design:"Design", "mani+pedi":"Mani + Pedi"};
+let TOKEN = localStorage.getItem("ns_token") || null;
+let ME    = JSON.parse(localStorage.getItem("ns_me") || "null"); // receptionist worker
+let STATE = null, pollTimer = null;
+
+const $ = id => document.getElementById(id);
+const esc = s => (s??"").toString().replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const svcName = s => SVC_LABEL[s] || s || "—";
+function toast(m, ms=3200){ const t=$("toast"); t.textContent=m; t.style.display="block"; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none", ms); }
+
+async function rpc(fn, args){
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method:"POST",
+    headers:{apikey:SUPABASE_ANON_KEY, Authorization:"Bearer "+SUPABASE_ANON_KEY, "content-type":"application/json"},
+    body: JSON.stringify(args||{})
+  });
+  const text = await r.text();
+  let data = null; try{ data = text ? JSON.parse(text) : null; }catch(e){ data = text; }
+  if(!r.ok){
+    const msg = (data && (data.message||data.hint)) || text || r.status;
+    if(/AUTH:/.test(msg)){ logout(false); throw new Error("Phiên hết hạn — đăng nhập lại / session expired"); }
+    throw new Error(msg.replace(/^[A-Z_]+:\s*/,""));
+  }
+  return data;
+}
+
+/* ---------- login ---------- */
+$("loginBtn").onclick = doLogin;
+$("pin").addEventListener("keydown", e => { if(e.key==="Enter") doLogin(); });
+async function doLogin(){
+  if(!SALON){ $("loginMsg").textContent = "Thiếu mã tiệm trong link (?salon=...)"; return; }
+  $("loginBtn").disabled = true; $("loginMsg").textContent = "";
+  try{
+    const res = await rpc("staff_login", {p_salon: SALON, p_pin: $("pin").value.trim()});
+    if(res.status !== "ok"){
+      $("loginMsg").textContent = res.status==="locked" ? "Khoá 10 phút (sai PIN quá nhiều)."
+        : res.status==="no_pin" ? "Tiệm chưa cài PIN — liên hệ chủ tiệm."
+        : `Sai PIN. Còn ${res.remaining ?? "?"} lần thử.`;
+    } else {
+      TOKEN = res.token;
+      localStorage.setItem("ns_token", TOKEN);
+      localStorage.setItem("ns_salon", SALON);
+      enter();
+    }
+  }catch(e){ $("loginMsg").textContent = e.message; }
+  $("loginBtn").disabled = false;
+}
+function logout(call=true){
+  if(call && TOKEN) rpc("staff_logout",{p_token:TOKEN}).catch(()=>{});
+  TOKEN = null; localStorage.removeItem("ns_token");
+  clearInterval(pollTimer);
+  $("app").style.display="none"; $("login").style.display="block";
+}
+$("logoutBtn").onclick = () => logout();
+
+async function enter(){
+  $("login").style.display="none"; $("app").style.display="block";
+  await refresh(true);
+  clearInterval(pollTimer);
+  pollTimer = setInterval(()=>refresh(false), 5000);
+  setInterval(()=>{ if(TOKEN) rpc("staff_flag_timeouts",{p_token:TOKEN}).catch(()=>{}); }, 30000);
+  setInterval(tickCountdowns, 1000);
+}
+
+/* ---------- state + render ---------- */
+async function refresh(first){
+  if(!TOKEN) return;
+  try{
+    STATE = await rpc("staff_state", {p_token: TOKEN});
+    if(first && !ME) pickMe();
+    render();
+  }catch(e){ if(first) toast("Lỗi tải dữ liệu: "+e.message); }
+}
+
+function pickMe(){
+  const staff = (STATE.workers||[]).filter(w => ["receptionist","owner","manager"].includes(w.role));
+  const list = staff.length ? staff : (STATE.workers||[]);
+  openModal(`<h3>Bạn là ai? · Who are you?</h3>
+    <div class="sub">Tên này được ghi vào nhật ký mỗi thao tác (gán thợ, override…)</div>
+    <div class="opts">${list.map(w=>`<button class="opt" onclick="setMe('${w.id}','${esc(w.name)}')">${esc(w.name)} <span class="muted">(${w.role})</span></button>`).join("")}</div>`);
+}
+function setMe(id,name){ ME={id,name}; localStorage.setItem("ns_me", JSON.stringify(ME)); closeModal(); render(); }
+
+function ago(ts){ const m=Math.floor((Date.now()-new Date(ts))/60000); return m<1?"vừa xong":(m<60?m+" phút":Math.floor(m/60)+"g"+(m%60)); }
+function chairsInUse(){ return new Set((STATE.sessions||[]).filter(s=>["pending","in_progress"].includes(s.status)).map(s=>s.chair)); }
+
+function render(){
+  if(!STATE) return;
+  $("salonName").textContent = STATE.salon.salon_name || "NailSync";
+  $("meChip").textContent = "👤 " + (ME ? ME.name : "?");
+  $("meChip").onclick = pickMe;
+
+  /* rotation bar */
+  const ws = (STATE.workers||[]).filter(w=>w.role==="worker");
+  const waiting = ws.filter(w=>w.queue_status==="waiting").sort((a,b)=>new Date(a.queued_at)-new Date(b.queued_at));
+  const posOf = {}; waiting.forEach((w,i)=>posOf[w.id]=i+1);
+  $("rotation").innerHTML = ws.map(w=>{
+    const st = !w.is_checked_in ? "off" : (w.is_on_break ? "on_break" : (w.queue_status||"off"));
+    const stTxt = {waiting:"#"+(posOf[w.id]||"–")+" chờ lượt", assigned:"đang làm", on_break:"nghỉ", off:"chưa vào ca"}[st]||st;
+    return `<div class="wk"><span class="pos">${w.worker_class==="everything"?"AB":w.worker_class==="bot_only"?"B":"TCN"}</span>
+      <div class="nm">${esc(w.name)}</div><div class="st ${st}">${stTxt}</div></div>`;
+  }).join("") || `<div class="empty" style="flex:1">Chưa có thợ nào</div>`;
+
+  /* pending */
+  const pend = (STATE.checkins||[]).filter(c=>c.status==="pending");
+  $("nPending").textContent = pend.length;
+  $("colPending").innerHTML = pend.map(c=>`
+    <div class="card">
+      <div class="row"><span class="who">${esc(c.display_name||c.customer_name||"Khách")}</span>
+        ${c.phone_last4?`<span class="badge">…${esc(c.phone_last4)}</span>`:""}
+        ${c.is_appointment?`<span class="badge appt">Hẹn trước</span>`:""}
+        ${c.requested_worker?`<span class="badge req">Yêu cầu: ${esc(c.requested_worker)}</span>`:""}
+      </div>
+      <div class="meta">Muốn: <b>${svcName(c.requested_service)}</b> · check-in ${ago(c.created_at)} trước</div>
+      <div class="actions">
+        <button class="btn" onclick="openConfirm('${c.id}')">✓ Xác nhận</button>
+        <button class="btn ghost small" onclick="openCancel('${c.id}')">Huỷ</button>
+      </div>
+    </div>`).join("") || `<div class="empty">Không có khách chờ xác nhận<br><span class="muted">No pending check-ins</span></div>`;
+
+  /* ready */
+  const ready = (STATE.checkins||[]).filter(c=>["confirmed","waiting_for_worker"].includes(c.status));
+  $("nReady").textContent = ready.length;
+  $("colReady").innerHTML = ready.map(c=>`
+    <div class="card">
+      <div class="row"><span class="who">${esc(c.display_name||c.customer_name||"Khách")}</span>
+        <span class="badge svc">${svcName(c.final_service)}</span>
+        ${c.requested_worker?`<span class="badge req">YC: ${esc(c.requested_worker)}</span>`:""}
+        ${c.status==="waiting_for_worker"?`<span class="badge" style="background:#fff3e0;color:#b35a00">⏳ chờ thợ ${esc(c.requested_worker||"")}${c.wait_note?" · "+esc(c.wait_note):""}</span>`:""}
+      </div>
+      <div class="meta">Xác nhận ${ago(c.created_at)} trước</div>
+      <div class="actions">
+        <button class="btn" onclick="openAssign('${c.id}')">→ Gán thợ</button>
+        <button class="btn ghost small" onclick="openCancel('${c.id}')">Huỷ</button>
+      </div>
+    </div>`).join("") || `<div class="empty">Chưa có khách sẵn sàng<br><span class="muted">Nobody ready to assign</span></div>`;
+
+  /* floor */
+  const floor = (STATE.sessions||[]).filter(s=>["pending","in_progress"].includes(s.status));
+  $("nFloor").textContent = floor.length;
+  $("colFloor").innerHTML = floor.map(s=>{
+    const flagged = !!s.timeout_flagged_at;
+    return `<div class="card ${flagged?"flag":""}" data-sess="${s.id}">
+      <div class="row"><span class="who">Ghế ${s.chair} · ${esc(s.worker||"?")}</span>
+        <span class="badge svc">${svcName(s.service)}</span>
+        ${s.assignment_type!=="auto"?`<span class="badge">${s.assignment_type}</span>`:""}
+      </div>
+      <div class="meta">Khách: ${esc(s.customer||"—")}</div>
+      ${s.status==="pending" ? `
+        <div class="meta">⏱ Chờ thợ xác nhận:
+          <span class="count" data-deadline="${s.ack_deadline}">…</span>
+          ${flagged?`<b style="color:var(--bad)"> — QUÁ GIỜ, thợ chưa phản hồi!</b>`:""}
+        </div>
+        <div class="actions">
+          <button class="btn ghost small" onclick="markOTW('${s.id}','${s.worker_id}')">Thợ đã tới ghế</button>
+          <button class="btn ${flagged?"warn":"ghost"} small" onclick="openReassign('${s.id}','${esc(s.worker||"")}')">↻ Giao thợ khác</button>
+        </div>`
+      : `
+        <div class="meta">▶ Bắt đầu ${ago(s.started_at)} trước</div>
+        <div class="actions"><button class="btn ghost small" onclick="markDone('${s.id}','${s.worker_id}')">✓ Xong (thay thợ bấm)</button></div>`}
+    </div>`;
+  }).join("") || `<div class="empty">Sàn trống<br><span class="muted">No active services</span></div>`;
+
+  /* done today */
+  const done = (STATE.sessions||[]).filter(s=>["completed","feedback_sent"].includes(s.status)).slice(0,12);
+  $("nDone").textContent = done.length;
+  $("colDone").innerHTML = done.map(s=>`
+    <div class="card" style="padding:8px 12px">
+      <div class="row"><span class="meta"><b>${esc(s.worker||"?")}</b> · ghế ${s.chair} · ${svcName(s.service)} · ${esc(s.customer||"—")}</span>
+      <span class="spacer"></span>
+      ${s.needs_post_service?`<span class="badge" style="background:#fff3e0;color:#b35a00;border-color:#ffe0b2">📝 thợ chưa điền sơn</span>`:""}
+      ${s.feedback_rating?`<span class="badge">${"⭐".repeat(s.feedback_rating)}</span>`
+        : (s.feedback_token?`<button class="btn ghost small" onclick="showQR('${s.feedback_token}')">QR đánh giá</button>`:"")}</div>
+    </div>`).join("") || `<div class="empty">Chưa có lượt nào xong hôm nay</div>`;
+}
+
+function tickCountdowns(){
+  document.querySelectorAll(".count[data-deadline]").forEach(el=>{
+    const left = Math.floor((new Date(el.dataset.deadline)-Date.now())/1000);
+    el.textContent = left>=0 ? `${Math.floor(left/60)}:${String(left%60).padStart(2,"0")}` : `quá ${Math.floor(-left/60)}p${(-left)%60}s`;
+    el.classList.toggle("late", left<0);
+  });
+}
+
+/* ---------- modal helpers ---------- */
+function openModal(html){ $("modal").innerHTML = html; $("ovl").classList.add("on"); }
+function closeModal(){ $("ovl").classList.remove("on"); }
+$("ovl").addEventListener("click", e=>{ if(e.target.id==="ovl") closeModal(); });
+
+function needMe(){ if(!ME){ toast("Chọn bạn là ai trước (góc phải trên)"); pickMe(); return true; } return false; }
+
+/* ---------- confirm (gate) ---------- */
+let confirmSvc = null;
+function openConfirm(id){
+  if(needMe()) return;
+  const c = STATE.checkins.find(x=>x.id===id); if(!c) return;
+  confirmSvc = (STATE.salon.services||[]).includes(c.requested_service) ? c.requested_service : null;
+  openModal(`<h3>Xác nhận khách · Confirm</h3>
+    <div class="sub">${esc(c.display_name||c.customer_name||"Khách")} — muốn: <b>${svcName(c.requested_service)}</b>. Chốt dịch vụ THẬT sẽ làm:</div>
+    <div class="opts" id="svcOpts">${(STATE.salon.services||[]).map(s=>
+      `<button class="opt ${s===confirmSvc?"sel":""}" data-s="${s}">${svcName(s)}</button>`).join("")}</div>
+    <div class="actions" style="justify-content:flex-end">
+      <button class="btn ghost" onclick="closeModal()">Đóng</button>
+      <button class="btn" id="cfGo" ${confirmSvc?"":"disabled"}>✓ Xác nhận</button>
+    </div>`);
+  $("svcOpts").querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
+    $("svcOpts").querySelectorAll(".opt").forEach(x=>x.classList.remove("sel"));
+    b.classList.add("sel"); confirmSvc=b.dataset.s; $("cfGo").disabled=false;
+  });
+  $("cfGo").onclick = async ()=>{
+    try{ await rpc("staff_confirm_checkin",{p_token:TOKEN,p_checkin_id:id,p_receptionist_id:ME.id,p_final_service:confirmSvc});
+      closeModal(); toast("Đã xác nhận ✓"); refresh(); }
+    catch(e){ toast(e.message); }
+  };
+}
+
+/* ---------- cancel ---------- */
+function openCancel(id){
+  if(needMe()) return;
+  openModal(`<h3>Huỷ check-in?</h3><div class="sub">Khách bỏ về / không có mặt</div>
+    <div class="mrow"><div class="mlabel">Lý do (tuỳ chọn)</div><input type="text" id="cxReason" placeholder="vd: khách đi mất"/></div>
+    <div class="actions" style="justify-content:flex-end">
+      <button class="btn ghost" onclick="closeModal()">Không</button>
+      <button class="btn warn" id="cxGo">Huỷ check-in</button>
+    </div>`);
+  $("cxGo").onclick = async ()=>{
+    try{ await rpc("staff_cancel_checkin",{p_token:TOKEN,p_checkin_id:id,p_receptionist_id:ME.id,p_reason:$("cxReason").value||null});
+      closeModal(); toast("Đã huỷ"); refresh(); }catch(e){ toast(e.message); }
+  };
+}
+
+/* ---------- assign ---------- */
+let asgChair=null, asgWorker=null, asgOverride=false;
+async function openAssign(id){
+  if(needMe()) return;
+  const c = STATE.checkins.find(x=>x.id===id); if(!c) return;
+  asgChair=null; asgWorker=null; asgOverride=false;
+  let recs=[];
+  try{ recs = await rpc("staff_recommend",{p_token:TOKEN,p_checkin_id:id}) || []; }catch(e){ toast(e.message); }
+  const used = chairsInUse();
+  const allW = (STATE.workers||[]).filter(w=>w.role==="worker");
+  openModal(`<h3>Gán thợ · Assign</h3>
+    <div class="sub">${esc(c.display_name||c.customer_name||"Khách")} — <b>${svcName(c.final_service)}</b>
+      ${c.requested_worker?` · yêu cầu đích danh: <b>${esc(c.requested_worker)}</b>`:""}</div>
+    <div class="mrow"><div class="mlabel">Hệ thống sẽ gán (đúng lượt + đủ tay nghề) — muốn thợ khác thì dùng Override</div>
+      <div class="opts" id="recOpts">${recs.length?recs.map((r,i)=>
+        `<span class="opt ${i===0?"sel":""}" style="cursor:default">${i===0?"👑 ":""}${esc(r.name)}${r.is_requested?" ⭐YC":""}</span>`).join("")
+        :`<span class="muted">Không có thợ rảnh đủ điều kiện — dùng Override hoặc chờ.</span>`}</div></div>
+    <div class="mrow"><div class="mlabel">Ghế · Chair</div>
+      <div class="opts" id="chairOpts">${Array.from({length:STATE.salon.station_count||10},(_,i)=>i+1).map(n=>
+        `<button class="opt" data-c="${n}" ${used.has(n)?"disabled":""}>${n}</button>`).join("")}</div></div>
+    <div class="mrow">
+      <button class="btn ghost small" id="ovToggle">⚠ Override — tự chọn thợ khác lượt</button>
+      <div id="ovBox" style="display:none;margin-top:8px">
+        <div class="opts" id="ovOpts">${allW.map(w=>`<button class="opt" data-w="${w.id}">${esc(w.name)}</button>`).join("")}</div>
+        <input type="text" id="ovReason" placeholder="Lý do override (bắt buộc)"/>
+      </div>
+    </div>
+    <div class="actions" style="justify-content:flex-end">
+      <button class="btn ghost" onclick="closeModal()">Đóng</button>
+      <button class="btn" id="asgGo">→ Gán</button>
+    </div>`);
+  const selOpt=(box,attr,cb)=>$(box).querySelectorAll("button.opt").forEach(b=>b.onclick=()=>{
+    $(box).querySelectorAll("button.opt").forEach(x=>x.classList.remove("sel"));
+    b.classList.add("sel"); cb(b.dataset[attr]);
+  });
+  selOpt("chairOpts","c",v=>asgChair=parseInt(v,10));
+  $("ovToggle").onclick=()=>{ asgOverride=!asgOverride; $("ovBox").style.display=asgOverride?"block":"none"; };
+  selOpt("ovOpts","w",v=>{asgWorker=v; asgOverride=true;});
+  $("asgGo").onclick = async ()=>{
+    if(!asgChair) return toast("Chọn ghế trước");
+    const args={p_token:TOKEN,p_checkin_id:id,p_receptionist_id:ME.id,p_chair:asgChair};
+    if(asgOverride){
+      if(!asgWorker) return toast("Chọn thợ override");
+      const rs=$("ovReason").value.trim(); if(!rs) return toast("Override bắt buộc có lý do");
+      args.p_force_worker_id=asgWorker; args.p_reason=rs;
+    }
+    try{
+      const res = await rpc("staff_assign",args);
+      if(res.status==="assigned"){ closeModal(); toast("Đã gán ✓ — báo thợ"); refresh(); }
+      else if(res.status==="needs_wait_decision"){ closeModal(); openWait(id, c.requested_worker); }
+      else if(res.status==="no_eligible_worker"){ toast("Không có thợ rảnh đủ điều kiện"); }
+      else toast(JSON.stringify(res));
+    }catch(e){ toast(e.message); }
+  };
+}
+
+/* ---------- wait decision ---------- */
+function openWait(id, workerName){
+  openModal(`<h3>Thợ ${esc(workerName||"được yêu cầu")} đang bận</h3>
+    <div class="sub">Hỏi khách: có muốn CHỜ đúng thợ này không?</div>
+    <div class="mrow"><div class="mlabel">Khách ngồi đâu? (ghi chú)</div><input type="text" id="wNote" placeholder="vd: sofa cạnh cửa sổ"/></div>
+    <div class="actions" style="justify-content:flex-end">
+      <button class="btn ghost" id="wNo">Không chờ — thợ khác</button>
+      <button class="btn" id="wYes">✓ Khách chịu chờ</button>
+    </div>`);
+  $("wYes").onclick=async()=>{ try{ await rpc("staff_wait_decision",{p_token:TOKEN,p_checkin_id:id,p_receptionist_id:ME.id,p_wait:true,p_wait_note:$("wNote").value||null}); closeModal(); toast("Đánh dấu chờ thợ ✓"); refresh(); }catch(e){toast(e.message);} };
+  $("wNo").onclick =async()=>{ try{ await rpc("staff_wait_decision",{p_token:TOKEN,p_checkin_id:id,p_receptionist_id:ME.id,p_wait:false}); closeModal(); toast("Quay về chia thường"); refresh(); }catch(e){toast(e.message);} };
+}
+
+/* ---------- reassign ---------- */
+function openReassign(sessId, oldName){
+  if(needMe()) return;
+  const cand = (STATE.workers||[]).filter(w=>w.role==="worker" && w.queue_status==="waiting" && w.is_checked_in && !w.is_on_break);
+  let pick=null;
+  openModal(`<h3>Giao lại cho thợ khác</h3>
+    <div class="sub">Job của ${esc(oldName)} chưa bắt đầu — chọn thợ mới (đang rảnh):</div>
+    <div class="opts" id="raOpts">${cand.length?cand.map(w=>`<button class="opt" data-w="${w.id}">${esc(w.name)}</button>`).join(""):`<span class="muted">Không có thợ rảnh</span>`}</div>
+    <div class="mrow"><div class="mlabel">Lý do (bắt buộc)</div><input type="text" id="raReason" placeholder="vd: thợ không phản hồi 3 phút"/></div>
+    <div class="actions" style="justify-content:flex-end">
+      <button class="btn ghost" onclick="closeModal()">Đóng</button>
+      <button class="btn warn" id="raGo">↻ Giao lại</button>
+    </div>`);
+  $("raOpts").querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
+    $("raOpts").querySelectorAll(".opt").forEach(x=>x.classList.remove("sel"));
+    b.classList.add("sel"); pick=b.dataset.w;
+  });
+  $("raGo").onclick=async()=>{
+    const rs=$("raReason").value.trim();
+    if(!pick) return toast("Chọn thợ mới"); if(!rs) return toast("Bắt buộc có lý do");
+    try{ await rpc("staff_reassign",{p_token:TOKEN,p_session_id:sessId,p_new_worker_id:pick,p_receptionist_id:ME.id,p_reason:rs});
+      closeModal(); toast("Đã giao lại ✓"); refresh(); }catch(e){ toast(e.message); }
+  };
+}
+
+/* ---------- worker actions done at the desk (fallback while no Telegram) ---------- */
+async function markOTW(sessId, workerId){
+  try{ await rpc("staff_on_the_way",{p_token:TOKEN,p_session_id:sessId,p_worker_id:workerId}); toast("Bắt đầu tính giờ ▶"); refresh(); }
+  catch(e){ toast(e.message); }
+}
+async function markDone(sessId, workerId){
+  try{ const r = await rpc("staff_done",{p_token:TOKEN,p_session_id:sessId,p_worker_id:workerId});
+    toast("Xong ✓"); refresh();
+    if(r && r.feedback_token) showQR(r.feedback_token);
+  }catch(e){ toast(e.message); }
+}
+function showQR(token){
+  const url = location.href.replace(/reception\.html.*/, `feedback-qr.html?token=${token}`);
+  window.open(url, "_blank");
+}
+
+/* ---------- boot ---------- */
+if(TOKEN && SALON){ enter(); }
+</script>
+</body>
+</html>

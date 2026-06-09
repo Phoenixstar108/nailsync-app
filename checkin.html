@@ -1,0 +1,270 @@
+<!doctype html>
+<!-- NailSync Block 1 · web_v2 — Customer QR check-in (redesigned).
+     Bilingual EN/VI · self-contained (inline SVG icons, no external images/fonts).
+     Keeps the EXACT Supabase RPC wiring (fn_customer_checkin) from web/checkin.html.
+     Reception QR → checkin.html?salon=<SALON_ID>.   Preview without backend → add &demo=1 -->
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>NailSync — Check in</title>
+<style>
+  :root{
+    --ink:#2b2026; --ink-soft:#6c5b63; --muted:#a2929a;
+    --rose:#c2185b; --rose-deep:#9d1248; --rose-600:#d81b60;
+    --blush:#fde7ef; --cream:#fffafc; --gold:#caa56a;
+    --line:#f1e4ea; --card:#ffffff;
+    --shadow:0 18px 50px -18px rgba(157,18,72,.30);
+    --radius:28px;
+    --serif:'Cambria','Times New Roman','Noto Serif',serif;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0}
+  body{
+    font-family:var(--sans);color:var(--ink);min-height:100svh;
+    display:grid;place-items:center;padding:22px 16px;
+    background:
+      radial-gradient(120% 80% at 15% -5%, #fff2f7 0%, rgba(255,242,247,0) 55%),
+      radial-gradient(110% 70% at 95% 0%, #fbeede 0%, rgba(251,238,222,0) 50%),
+      radial-gradient(140% 100% at 50% 110%, #fde3ee 0%, rgba(253,227,238,0) 55%),
+      linear-gradient(180deg,#fff7fb 0%,#fff3f7 100%);
+    position:relative;overflow-x:hidden;
+  }
+  /* soft decorative orbs */
+  body::before,body::after{content:"";position:fixed;border-radius:50%;filter:blur(60px);opacity:.5;z-index:0;pointer-events:none}
+  body::before{width:300px;height:300px;left:-90px;top:-60px;background:radial-gradient(circle,#f7b8d2,transparent 70%)}
+  body::after{width:340px;height:340px;right:-110px;bottom:-90px;background:radial-gradient(circle,#f3d39e,transparent 70%)}
+  .stage{width:min(444px,100%);position:relative;z-index:1}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin:0 4px 16px}
+  .logo{display:flex;align-items:center;gap:10px}
+  .mark{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;
+    background:linear-gradient(145deg,#e23a7e,#9d1248);box-shadow:0 8px 20px -8px rgba(157,18,72,.6)}
+  .mark svg{width:22px;height:22px}
+  .wordmark{font-family:var(--serif);font-size:21px;letter-spacing:.3px;font-weight:600;color:#3a2630}
+  .wordmark b{color:var(--rose);font-weight:600}
+  .lang{display:inline-flex;background:#fff;border:1px solid var(--line);border-radius:999px;padding:3px;box-shadow:var(--shadow)}
+  .lang button{border:0;background:transparent;font:600 12.5px var(--sans);color:var(--muted);padding:5px 11px;border-radius:999px;cursor:pointer;letter-spacing:.3px}
+  .lang button.on{background:linear-gradient(145deg,#e23a7e,#b3164e);color:#fff}
+
+  .card{background:var(--card);border:1px solid #fbeef3;border-radius:var(--radius);box-shadow:var(--shadow);
+    padding:26px 22px 24px;position:relative;overflow:hidden;animation:rise .6s cubic-bezier(.2,.7,.3,1) both}
+  .card::before{content:"";position:absolute;inset:0 0 auto 0;height:140px;background:linear-gradient(180deg,#fff6fa,transparent);pointer-events:none}
+  .halo{width:84px;height:84px;border-radius:50%;margin:2px auto 14px;display:grid;place-items:center;position:relative;
+    background:radial-gradient(circle at 30% 25%,#fde3ee,#f8c6dc);box-shadow:inset 0 0 0 1px #fff,0 12px 26px -12px rgba(194,24,91,.5)}
+  .halo svg{width:38px;height:38px;stroke:var(--rose-deep);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .halo .sp{position:absolute;color:#e7b765}
+  .halo .sp.a{top:-2px;right:8px;font-size:14px;animation:tw 2.4s ease-in-out infinite}
+  .halo .sp.b{bottom:2px;left:4px;font-size:10px;animation:tw 2.4s ease-in-out .8s infinite}
+
+  h1{font-family:var(--serif);font-weight:600;text-align:center;font-size:25px;margin:0 0 4px;color:#34222c}
+  .sub{text-align:center;color:var(--ink-soft);font-size:13.5px;margin:0 auto 20px;max-width:30ch;line-height:1.5}
+
+  .field{position:relative;margin:9px 0}
+  .field svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .field input{width:100%;font:16px var(--sans);color:var(--ink);padding:14px 14px 14px 42px;border:1.5px solid var(--line);border-radius:15px;background:#fffdfe;transition:.2s}
+  .field input::placeholder{color:#bcaeb5}
+  .field input:focus{outline:0;border-color:#f1a6c4;box-shadow:0 0 0 4px rgba(216,27,96,.10);background:#fff}
+
+  .or{display:flex;align-items:center;gap:12px;color:#c7b8bf;font-size:12px;margin:12px 2px;letter-spacing:.12em;text-transform:uppercase}
+  .or::before,.or::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,transparent,#efdfe7,transparent)}
+
+  .prompt{font-weight:600;font-size:14px;margin:16px 2px 10px;color:#4a323d}
+  .svc{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .svc button{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:9px;
+    padding:14px;border:1.5px solid var(--line);border-radius:18px;background:#fffdfe;cursor:pointer;text-align:left;transition:transform .15s,border-color .2s,box-shadow .2s}
+  .svc button:active{transform:scale(.97)}
+  .svc .chip{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;box-shadow:0 8px 16px -8px rgba(0,0,0,.25)}
+  .svc .chip svg{width:25px;height:25px;stroke:#fff;fill:none;stroke-width:1.85;stroke-linecap:round;stroke-linejoin:round}
+  .svc .t{display:block;font-weight:650;font-size:14.5px;color:#3a2731;line-height:1.15}
+  .svc .d{display:block;font-size:11.5px;color:var(--muted);margin-top:3px}
+  .svc .hands .chip{background:linear-gradient(145deg,#f7a8c6,#e25b8c)}
+  .svc .feet  .chip{background:linear-gradient(145deg,#ffc9a6,#f0936a)}
+  .svc .both  .chip{background:linear-gradient(145deg,#f3d39e,#d9a85a)}
+  .svc .powder .chip{background:linear-gradient(145deg,#dcb6ef,#b07ad6)}
+  .svc button.sel{border-color:var(--rose);box-shadow:0 0 0 3px rgba(216,27,96,.14),0 16px 30px -16px rgba(194,24,91,.5)}
+  .svc .tick{position:absolute;top:9px;right:9px;width:21px;height:21px;border-radius:50%;background:var(--rose);display:grid;place-items:center;opacity:0;transform:scale(.4);transition:.22s}
+  .svc .tick svg{width:12px;height:12px;stroke:#fff;stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .svc button.sel .tick{opacity:1;transform:scale(1)}
+
+  .cta{width:100%;margin-top:20px;font:650 16.5px var(--sans);color:#fff;letter-spacing:.2px;border:0;border-radius:16px;padding:16px;cursor:pointer;
+    background:linear-gradient(145deg,#e23a7e,#b3164e);box-shadow:0 14px 28px -12px rgba(179,22,78,.65);transition:transform .15s,filter .2s,opacity .2s;display:flex;align-items:center;justify-content:center;gap:9px}
+  .cta:active{transform:translateY(1px) scale(.99)}
+  .cta:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+  .cta svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+  .note{display:flex;gap:8px;align-items:flex-start;margin:14px 4px 0;color:var(--muted);font-size:11.8px;line-height:1.5}
+  .note svg{flex:none;width:15px;height:15px;stroke:#d6a9bb;fill:none;stroke-width:1.8;margin-top:1px}
+  .err{color:#c0143f;font-size:12.5px;text-align:center;margin-top:10px;min-height:16px}
+  .footer{text-align:center;color:#c2b2ba;font-size:11px;margin:16px 0 0;letter-spacing:.2px}
+
+  /* success */
+  .done{text-align:center;padding:14px 6px 6px;animation:rise .5s ease both}
+  .ring{width:96px;height:96px;margin:6px auto 16px;position:relative}
+  .ring svg{width:96px;height:96px}
+  .ring .circle{stroke:#f0bcd2;stroke-width:4;fill:#fff6fa}
+  .ring .check{stroke:var(--rose);stroke-width:5.5;fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:80;stroke-dashoffset:80;animation:draw .55s .2s cubic-bezier(.6,.2,.2,1) forwards}
+  .spark{position:absolute;color:#e7b765;opacity:0;animation:burst .9s .35s ease forwards}
+  @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  @keyframes tw{0%,100%{opacity:.35;transform:scale(.85)}50%{opacity:1;transform:scale(1.15)}}
+  @keyframes burst{0%{opacity:0;transform:scale(.3)}40%{opacity:1}100%{opacity:0;transform:scale(1.5) translateY(-10px)}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="topbar">
+    <div class="logo">
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none"><rect x="9.5" y="2" width="5" height="2.3" rx="1.1" fill="#fff"/><path d="M9 4.6h6v2.1c0 .5.2 1 .6 1.3l1 .9c.6.5.9 1.2.9 2V19a1.6 1.6 0 0 1-1.6 1.6H8.1A1.6 1.6 0 0 1 6.5 19v-8.1c0-.8.3-1.5.9-2l1-.9c.4-.3.6-.8.6-1.3V4.6Z" fill="#fff"/><rect x="8.2" y="12.3" width="7.6" height="4.4" rx="1.1" fill="#c2185b"/></svg></div>
+      <div class="wordmark" data-i18n="brand">Nail<b>Sync</b></div>
+    </div>
+    <div class="lang" role="group" aria-label="Language">
+      <button id="en" class="on" onclick="setLang('en')">EN</button>
+      <button id="vi" onclick="setLang('vi')">VI</button>
+    </div>
+  </div>
+
+  <div class="card" id="card">
+    <div class="halo">
+      <span class="sp a">✦</span><span class="sp b">✦</span>
+      <svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/><path d="M5 3v4M3 5h4M19 17v4M17 19h4"/></svg>
+    </div>
+    <h1 data-i18n="title">Welcome</h1>
+    <p class="sub" data-i18n="sub">Let's get you checked in. It only takes a few taps.</p>
+
+    <div class="field">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c.6-3.6 4-6 8-6s7.4 2.4 8 6"/></svg>
+      <input id="name" data-i18n-ph="namePh" placeholder="Your name"/>
+    </div>
+    <div class="or" data-i18n="or">or</div>
+    <div class="field">
+      <svg viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="19" rx="2.4"/><path d="M10.5 18.5h3"/></svg>
+      <input id="last4" inputmode="numeric" maxlength="4" data-i18n-ph="last4Ph" placeholder="Last 4 digits of phone"/>
+    </div>
+
+    <div class="prompt" data-i18n="prompt">What are you here for today?</div>
+    <div class="svc" id="svc">
+      <button class="hands" data-s="hands">
+        <span class="tick"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <span class="chip"><svg viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.3l-3.6-3.6a2 2 0 0 1 2.9-2.8L7 15"/></svg></span>
+        <span><span class="t" data-i18n="svcHands">Hands</span><span class="d" data-i18n="svcHandsD">Manicure</span></span>
+      </button>
+      <button class="feet" data-s="feet">
+        <span class="tick"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <span class="chip"><svg viewBox="0 0 24 24"><path d="M4 16v-2.4C4 11.5 3 10.5 3 8c0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"/></svg></span>
+        <span><span class="t" data-i18n="svcFeet">Feet</span><span class="d" data-i18n="svcFeetD">Pedicure</span></span>
+      </button>
+      <button class="both" data-s="both">
+        <span class="tick"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <span class="chip"><svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg></span>
+        <span><span class="t" data-i18n="svcBoth">Mani + Pedi</span><span class="d" data-i18n="svcBothD">The full treat</span></span>
+      </button>
+      <button class="powder" data-s="powder">
+        <span class="tick"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <span class="chip"><svg viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 12L2 9Z"/><path d="M11 3 8 9l4 12 4-12-3-6"/><path d="M2 9h20"/></svg></span>
+        <span><span class="t" data-i18n="svcPowder">Powder / Acrylic</span><span class="d" data-i18n="svcPowderD">Sculpted nails</span></span>
+      </button>
+    </div>
+
+    <button class="cta" id="go" disabled>
+      <span data-i18n="cta">Check in</span>
+      <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </button>
+    <div class="err" id="err"></div>
+
+    <div class="note">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M12 11v5M12 7.5h.01"/></svg>
+      <span data-i18n="note">Reception will confirm and pick the best available technician for you. No need to choose a tech here.</span>
+    </div>
+  </div>
+  <div class="footer" data-i18n="footer">Powered by NailSync</div>
+</div>
+
+<script>
+/* ---- fill these in for the pilot salon (same as the original page) ---- */
+const SUPABASE_URL = "https://liavvyeklmixeyudfwxm.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpYXZ2eWVrbG1peGV5dWRmd3htIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODgyOTAsImV4cCI6MjA5NjM2NDI5MH0.vzUiOMRkWYSZ4zGejqKAvq0_-C3YIrM_wa0fTyOmT-E";
+/* ---------------------------------------------------------------------- */
+
+const I18N = {
+  en:{ brand:'Nail<b>Sync</b>', title:'Welcome', sub:"Let's get you checked in. It only takes a few taps.",
+    namePh:'Your name', or:'or', last4Ph:'Last 4 digits of phone', prompt:'What are you here for today?',
+    svcHands:'Hands', svcHandsD:'Manicure', svcFeet:'Feet', svcFeetD:'Pedicure',
+    svcBoth:'Mani + Pedi', svcBothD:'The full treat', svcPowder:'Powder / Acrylic', svcPowderD:'Sculpted nails',
+    cta:'Check in', note:'Reception will confirm and pick the best available technician for you. No need to choose a tech here.',
+    footer:'Powered by NailSync', pickService:'Please pick a service 💅', noSalon:'Missing salon code in the QR link.',
+    checking:'Checking you in…', failed:'Check-in failed. Please see reception.',
+    doneTitle:"You're all set!", doneBody:'Please have a seat — reception will call you in just a moment.' },
+  vi:{ brand:'Nail<b>Sync</b>', title:'Chào mừng', sub:'Mời bạn nhận chỗ — chỉ vài chạm là xong.',
+    namePh:'Tên của bạn', or:'hoặc', last4Ph:'4 số cuối điện thoại', prompt:'Hôm nay bạn làm dịch vụ gì?',
+    svcHands:'Tay', svcHandsD:'Làm móng tay', svcFeet:'Chân', svcFeetD:'Làm móng chân',
+    svcBoth:'Tay + Chân', svcBothD:'Trọn gói thư giãn', svcPowder:'Bột / Acrylic', svcPowderD:'Đắp móng',
+    cta:'Nhận chỗ', note:'Lễ tân sẽ xác nhận và chọn thợ phù hợp nhất cho bạn. Bạn không cần chọn thợ ở đây.',
+    footer:'Vận hành bởi NailSync', pickService:'Vui lòng chọn dịch vụ 💅', noSalon:'Thiếu mã tiệm trong link QR.',
+    checking:'Đang nhận chỗ…', failed:'Nhận chỗ thất bại. Vui lòng gặp lễ tân.',
+    doneTitle:'Xong rồi!', doneBody:'Mời bạn ngồi nghỉ — lễ tân sẽ gọi bạn ngay thôi.' }
+};
+const params = new URLSearchParams(location.search);
+const salon = params.get('salon');
+const DEMO = params.get('demo') === '1';
+let lang = localStorage.getItem('ns_lang') || (navigator.language||'en').slice(0,2).toLowerCase();
+if(!I18N[lang]) lang='en';
+let service = null;
+
+function t(k){ return (I18N[lang]||I18N.en)[k]; }
+function applyLang(){
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-i18n]').forEach(el=>el.innerHTML = t(el.dataset.i18n));
+  document.querySelectorAll('[data-i18n-ph]').forEach(el=>el.placeholder = t(el.dataset.i18nPh));
+  document.getElementById('en').classList.toggle('on', lang==='en');
+  document.getElementById('vi').classList.toggle('on', lang==='vi');
+}
+function setLang(l){ lang=l; localStorage.setItem('ns_lang',l); applyLang(); }
+
+const svc=document.getElementById('svc'), go=document.getElementById('go'), err=document.getElementById('err');
+svc.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+  svc.querySelectorAll('button').forEach(x=>x.classList.remove('sel'));
+  b.classList.add('sel'); service=b.dataset.s; go.disabled=false; err.textContent='';
+});
+
+go.onclick=async ()=>{
+  err.textContent='';
+  if(!service){ err.textContent=t('pickService'); return; }
+  if(!salon && !DEMO){ err.textContent=t('noSalon'); return; }
+  const name=document.getElementById('name').value.trim();
+  const last4=document.getElementById('last4').value.trim();
+  go.disabled=true; go.querySelector('span').textContent=t('checking');
+
+  if(DEMO){ setTimeout(()=>showDone(name),700); return; }
+  try{
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/rpc/fn_customer_checkin`,{
+      method:'POST',
+      headers:{ apikey:SUPABASE_ANON_KEY, Authorization:'Bearer '+SUPABASE_ANON_KEY, 'content-type':'application/json' },
+      body:JSON.stringify({ p_salon:salon, p_service:service, p_display_name:name||null, p_phone_last4:last4||null })
+    });
+    if(!r.ok) throw new Error(await r.text());
+    showDone(name);
+  }catch(e){ go.disabled=false; go.querySelector('span').textContent=t('cta'); err.textContent=t('failed'); }
+};
+
+function showDone(name){
+  const hi = name ? (lang==='vi'?`, ${name}`:`, ${name}`) : '';
+  document.getElementById('card').innerHTML = `
+    <div class="done">
+      <div class="ring">
+        <svg viewBox="0 0 100 100"><circle class="circle" cx="50" cy="50" r="44"/><path class="check" d="M30 51l14 14 26-29"/></svg>
+        <span class="spark" style="top:6px;left:14px">✦</span>
+        <span class="spark" style="top:10px;right:10px;animation-delay:.5s">✦</span>
+        <span class="spark" style="bottom:6px;left:30px;animation-delay:.7s">✧</span>
+      </div>
+      <h1>${t('doneTitle').replace('!',hi+'!')}</h1>
+      <p class="sub">${t('doneBody')}</p>
+    </div>`;
+}
+
+applyLang();
+</script>
+</body>
+</html>

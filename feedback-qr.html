@@ -1,0 +1,123 @@
+<!doctype html>
+<!-- NailSync Block 1 · web_v2 — Feedback QR display (redesigned).
+     The worker opens this from the Telegram "Done" button and shows their phone;
+     the customer scans it. Bilingual EN/VI. Same target logic as web/feedback-qr.html.
+     URL: feedback-qr.html?token=<room_sessions.feedback_link_token>
+     (The QR matrix itself is rendered by api.qrserver.com — the one online call;
+      the worker's phone is online at the salon. Everything else is self-contained.) -->
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>NailSync — Scan for feedback</title>
+<style>
+  :root{
+    --ink:#2b2026; --ink-soft:#6c5b63; --muted:#a2929a;
+    --rose:#c2185b; --rose-deep:#9d1248; --line:#f1e4ea;
+    --shadow:0 18px 50px -18px rgba(157,18,72,.30); --radius:28px;
+    --serif:'Cambria','Times New Roman','Noto Serif',serif;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0}
+  body{font-family:var(--sans);color:var(--ink);min-height:100svh;display:grid;place-items:center;padding:22px 16px;position:relative;overflow-x:hidden;
+    background:
+      radial-gradient(120% 80% at 15% -5%, #fff2f7 0%, rgba(255,242,247,0) 55%),
+      radial-gradient(110% 70% at 95% 0%, #fbeede 0%, rgba(251,238,222,0) 50%),
+      radial-gradient(140% 100% at 50% 110%, #fde3ee 0%, rgba(253,227,238,0) 55%),
+      linear-gradient(180deg,#fff7fb 0%,#fff3f7 100%);}
+  body::before,body::after{content:"";position:fixed;border-radius:50%;filter:blur(60px);opacity:.5;z-index:0;pointer-events:none}
+  body::before{width:300px;height:300px;left:-90px;top:-60px;background:radial-gradient(circle,#f7b8d2,transparent 70%)}
+  body::after{width:340px;height:340px;right:-110px;bottom:-90px;background:radial-gradient(circle,#f3d39e,transparent 70%)}
+  .stage{width:min(420px,100%);position:relative;z-index:1}
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin:0 4px 16px}
+  .logo{display:flex;align-items:center;gap:10px}
+  .mark{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(145deg,#e23a7e,#9d1248);box-shadow:0 8px 20px -8px rgba(157,18,72,.6)}
+  .mark svg{width:22px;height:22px}
+  .wordmark{font-family:var(--serif);font-size:21px;font-weight:600;color:#3a2630}
+  .wordmark b{color:var(--rose)}
+  .lang{display:inline-flex;background:#fff;border:1px solid var(--line);border-radius:999px;padding:3px;box-shadow:var(--shadow)}
+  .lang button{border:0;background:transparent;font:600 12.5px var(--sans);color:var(--muted);padding:5px 11px;border-radius:999px;cursor:pointer}
+  .lang button.on{background:linear-gradient(145deg,#e23a7e,#b3164e);color:#fff}
+
+  .card{background:#fff;border:1px solid #fbeef3;border-radius:var(--radius);box-shadow:var(--shadow);padding:30px 24px;text-align:center;position:relative;overflow:hidden;animation:rise .6s cubic-bezier(.2,.7,.3,1) both}
+  .card::before{content:"";position:absolute;inset:0 0 auto 0;height:120px;background:linear-gradient(180deg,#fff6fa,transparent)}
+  h1{font-family:var(--serif);font-weight:600;font-size:23px;margin:0 0 4px;color:#34222c}
+  .sub{color:var(--ink-soft);font-size:13.5px;margin:0 0 20px}
+  .qrwrap{position:relative;width:260px;height:260px;margin:0 auto;display:grid;place-items:center;background:#fff;border-radius:22px;box-shadow:0 10px 30px -14px rgba(157,18,72,.4),inset 0 0 0 1px #f6e7ee}
+  .qrwrap img{width:212px;height:212px;border-radius:10px;display:block}
+  /* rose corner brackets */
+  .qrwrap i{position:absolute;width:26px;height:26px;border:3px solid var(--rose);border-radius:6px}
+  .qrwrap i.tl{top:12px;left:12px;border-right:0;border-bottom:0}
+  .qrwrap i.tr{top:12px;right:12px;border-left:0;border-bottom:0}
+  .qrwrap i.bl{bottom:12px;left:12px;border-right:0;border-top:0}
+  .qrwrap i.br{bottom:12px;right:12px;border-left:0;border-top:0}
+  .cam{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--rose-deep);font-weight:600;font-size:13.5px;margin:18px 0 2px}
+  .cam svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  a.link{display:inline-block;margin-top:12px;color:var(--muted);font-size:12px;text-decoration:none;border-bottom:1px dotted #d8c2cc;word-break:break-all}
+  .footer{text-align:center;color:#c2b2ba;font-size:11px;margin:16px 0 0}
+  @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="topbar">
+    <div class="logo">
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none"><rect x="9.5" y="2" width="5" height="2.3" rx="1.1" fill="#fff"/><path d="M9 4.6h6v2.1c0 .5.2 1 .6 1.3l1 .9c.6.5.9 1.2.9 2V19a1.6 1.6 0 0 1-1.6 1.6H8.1A1.6 1.6 0 0 1 6.5 19v-8.1c0-.8.3-1.5.9-2l1-.9c.4-.3.6-.8.6-1.3V4.6Z" fill="#fff"/><rect x="8.2" y="12.3" width="7.6" height="4.4" rx="1.1" fill="#c2185b"/></svg></div>
+      <div class="wordmark">Nail<b>Sync</b></div>
+    </div>
+    <div class="lang" role="group" aria-label="Language">
+      <button id="en" class="on" onclick="setLang('en')">EN</button>
+      <button id="vi" onclick="setLang('vi')">VI</button>
+    </div>
+  </div>
+
+  <div class="card" id="card">
+    <h1 data-i18n="title">Scan to rate your visit</h1>
+    <p class="sub" data-i18n="sub">We'd love a quick 10-second review 💕</p>
+    <div class="qrwrap"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i>
+      <img id="qr" alt="feedback QR"/>
+    </div>
+    <div class="cam">
+      <svg viewBox="0 0 24 24"><path d="M3 9a2 2 0 0 1 2-2h1.5l1-1.6a1 1 0 0 1 .9-.4h5.2a1 1 0 0 1 .9.4l1 1.6H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><circle cx="12" cy="13" r="3.2"/></svg>
+      <span data-i18n="cam">Point your camera at the code</span>
+    </div>
+    <a class="link" id="link" target="_blank" rel="noopener"></a>
+  </div>
+  <div class="footer" data-i18n="footer">Powered by NailSync</div>
+</div>
+
+<script>
+const I18N={
+  en:{ title:'Scan to rate your visit', sub:"We'd love a quick 10-second review 💕", cam:'Point your camera at the code',
+       open:'Open feedback page', footer:'Powered by NailSync', missing:'Missing feedback code' },
+  vi:{ title:'Quét để đánh giá', sub:'Chỉ 10 giây thôi, cảm ơn bạn nhiều 💕', cam:'Đưa camera vào mã QR',
+       open:'Mở trang đánh giá', footer:'Vận hành bởi NailSync', missing:'Thiếu mã đánh giá' }
+};
+let lang=localStorage.getItem('ns_lang')||(navigator.language||'en').slice(0,2).toLowerCase();
+if(!I18N[lang]) lang='en';
+const T=()=>I18N[lang]||I18N.en;
+function applyLang(){
+  document.documentElement.lang=lang;
+  document.querySelectorAll('[data-i18n]').forEach(el=>el.textContent=T()[el.dataset.i18n]);
+  document.getElementById('en').classList.toggle('on',lang==='en');
+  document.getElementById('vi').classList.toggle('on',lang==='vi');
+  const a=document.getElementById('link'); if(a.href) a.textContent=T().open;
+}
+function setLang(l){ lang=l; localStorage.setItem('ns_lang',l); applyLang(); }
+
+const token=new URLSearchParams(location.search).get('token');
+const target=`${location.origin}${location.pathname.replace(/feedback-qr\.html$/,'feedback.html')}?token=${token}`;
+if(!token){
+  document.getElementById('card').innerHTML=`<h1>${T().missing}</h1>`;
+}else{
+  const img=document.getElementById('qr');
+  img.src='https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=0&data='+encodeURIComponent(target);
+  img.onerror=()=>{ img.replaceWith(Object.assign(document.createElement('div'),{style:'font-size:13px;color:#9d1248;padding:20px',textContent:target})); };
+  const a=document.getElementById('link'); a.href=target;
+}
+applyLang();
+</script>
+</body>
+</html>
