@@ -274,7 +274,7 @@ const Q = [
 function renderForm(s){
   if(!pf || pf.sid!==s.id) pf={sid:s.id, polishes:[], noPolish:false, a1:null,a2:null,a3:null};
   $("stateCard").innerHTML = `<div class="big">📝</div>
-    <div class="statusline"><b>Điền 10 giây trước khi đưa QR cho khách</b><br>
+    <div class="statusline"><b>Điền 10 giây nha — gửi xong, máy khách tự hiện chỗ chấm điểm</b><br>
     Ghế ${s.chair} · ${svcName(s.service)} · ${esc(s.customer||"khách")}</div>`;
   const f=pf;
   $("actionCard").innerHTML = `
