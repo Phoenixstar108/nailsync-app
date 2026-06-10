@@ -96,6 +96,7 @@ let MYID  = localStorage.getItem("ns_worker_id") || null;
 let STATE = null, timer = null;
 let lastPendingId = null;           // để phát hiện job MỚI -> chuông
 let pf = null;                    // state form sau-Done {sid, polishes[], noPolish, a1,a2,a3}
+let LASTQR = null;                // token QR dự phòng của lượt vừa gửi form (khách lỡ đóng trang)
 
 /* ---- chuông + rung báo khách mới (thay Telegram) ---- */
 let AC = null;
@@ -217,6 +218,9 @@ function render(){
   }else{
     html=`<div class="big">⏳</div><div class="statusline">Đã vào ca — chờ vào vòng chia</div>`;
   }
+  if(LASTQR){ html+=`<div style="height:8px"></div>
+    <button class="opt" style="width:100%" onclick="window.open(location.href.replace(/worker\\.html.*/,'feedback-qr.html?token='+LASTQR),'_blank');LASTQR=null;">
+      📲 Khách vừa rồi đóng trang mất? Mở QR đánh giá dự phòng</button>`; }
   $("stateCard").innerHTML=html;
 
   /* job card */
@@ -289,7 +293,7 @@ function renderForm(s){
       <div class="meta" style="font-weight:700;margin:8px 0 4px">${q.t}</div>
       <div class="opts">${q.opts.map(([v,l])=>`<button class="opt ${f[q.k]===v?"sel":""}" onclick="pf.${q.k}='${v}';renderForm(myFormDue())">${l}</button>`).join("")}</div>`).join("")}
     <div style="height:8px"></div>
-    <button class="btn" id="pfGo" ${(f.a1&&f.a2&&f.a3&&(f.noPolish||f.polishes.length))?"":"disabled"} onclick="submitPostService()">✓ Gửi & lấy QR cho khách</button>`;
+    <button class="btn" id="pfGo" ${(f.a1&&f.a2&&f.a3&&(f.noPolish||f.polishes.length))?"":"disabled"} onclick="submitPostService()">✓ Gửi — khách tự thấy chỗ chấm điểm trên máy họ</button>`;
   const pin=$("polIn"); if(pin) pin.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();addPolish();}});
 }
 function addPolish(){
@@ -303,11 +307,10 @@ async function submitPostService(){
   try{
     const r = await rpc("staff_submit_post_service",{p_token:TOKEN,p_session_id:f.sid,p_worker_id:MYID,
       p_no_polish:!!f.noPolish, p_polishes:f.polishes, p_attitude:f.a1, p_demand:f.a2, p_serve_again:f.a3});
-    pf=null; toast("Đã lưu ✓");
-    if(r&&r.feedback_token){
-      const url=location.href.replace(/worker\.html.*/,`feedback-qr.html?token=${r.feedback_token}`);
-      window.open(url,"_blank");
-    }
+    pf=null; toast("Đã lưu ✓ — màn chấm điểm tự hiện trên máy khách");
+    // Vé sống tự bật chấm điểm trên máy khách (09/06/2026) → KHÔNG tự mở QR nữa.
+    // QR chỉ là dự phòng khi khách lỡ đóng trang: lưu token để bấm tay.
+    if(r&&r.feedback_token){ LASTQR = r.feedback_token; }
     refresh();
   }catch(e){ toast(e.message); }
 }
