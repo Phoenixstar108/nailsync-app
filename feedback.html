@@ -62,6 +62,13 @@
   .err{color:#c0143f;font-size:12.5px;margin-top:10px;min-height:16px}
   .footer{text-align:center;color:#c2b2ba;font-size:11px;margin:16px 0 0}
 
+  .chips{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin:8px 0 2px}
+  .chips button{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:9px 14px;font:600 13px var(--sans);color:var(--ink-soft);cursor:pointer}
+  .chips button.sel{border-color:var(--rose);background:#fde7ef;color:var(--rose-deep)}
+  .fbx b{color:var(--rose-deep);font-family:var(--serif);font-size:16.5px}
+  .fbx .sub2{color:var(--ink-soft);font-size:13px;margin:3px 0 2px}
+  .fbx input{width:100%;font:14.5px var(--sans);color:var(--ink);padding:12px 13px;border:1.5px solid var(--line);border-radius:14px;background:#fffdfe;margin-top:9px}
+  .fbx input:focus{outline:0;border-color:#f1a6c4;box-shadow:0 0 0 4px rgba(216,27,96,.10)}
   .done{padding:14px 6px 6px;animation:rise .5s ease both}
   .bighe{font-size:60px;line-height:1;margin:6px 0 10px;position:relative;display:inline-block;animation:pop .6s cubic-bezier(.2,1.4,.4,1) both}
   .spark{position:absolute;color:#e7b765;opacity:0;animation:burst 1s .3s ease forwards}
@@ -98,6 +105,7 @@
       <button data-v="5"><svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.3 6.8.7-5.1 4.6 1.5 6.7L12 18l-6 2.8 1.5-6.7-5.1-4.6 6.8-.7z"/></svg></button>
     </div>
     <div class="rlabel" id="rlabel"></div>
+    <div class="fbx" id="fbX"></div>
 
     <textarea id="comment" data-i18n-ph="commentPh" placeholder="Anything you'd like us to know? (optional)"></textarea>
     <button class="cta" id="go" disabled>
@@ -122,12 +130,22 @@ const I18N={
     submit:'Submit', footer:'Powered by NailSync', sending:'Sending…', failed:'Could not send. Please try again.',
     withWho:(s,w)=>`${s}${w?` · with <b>${w}</b>`:''}`,
     labels:['','We let you down','Could be better','It was okay','Really good!','Absolutely loved it!'],
-    thanksHi:'Thank you!', thanksLo:'Thank you', byeHi:'We loved having you — see you next time 💕', byeLo:"Thank you for the honest feedback — we'll make it right." },
+    thanksHi:'Thank you!', thanksLo:'We hear you 🙏', byeHi:'We loved having you — see you next time 💕', byeLo:"The owner will personally reach out to apologize. Please give us another chance.",
+    sorry:"We're so sorry 🙏", sorrySub:'Tell us what went wrong — pick all that apply',
+    mid:'Thank you 💛', midSub:'What kept this from being 5 stars? (pick all that apply)',
+    phonePh:'Phone number — the owner will personally call to apologize (optional)',
+    googleMsg:'Love us? Share it on Google 💕', googleBtn:'⭐ Write a Google review',
+    iss:{wait:'Long wait',attitude:'Attitude',quality:'Nail quality',price:'Price',clean:'Cleanliness',other:'Other'} },
   vi:{ title:'Buổi làm của bạn thế nào?', tapToRate:'Chạm vào sao để đánh giá', commentPh:'Bạn muốn nhắn gì cho tiệm? (không bắt buộc)',
     submit:'Gửi', footer:'Vận hành bởi NailSync', sending:'Đang gửi…', failed:'Gửi không được. Vui lòng thử lại.',
     withWho:(s,w)=>`${s}${w?` · cùng <b>${w}</b>`:''}`,
     labels:['','Chưa hài lòng','Có thể tốt hơn','Tạm ổn','Rất tốt!','Tuyệt vời, mê luôn!'],
-    thanksHi:'Cảm ơn bạn!', thanksLo:'Cảm ơn bạn', byeHi:'Rất vui được phục vụ bạn — hẹn gặp lại 💕', byeLo:'Cảm ơn góp ý thẳng thắn — tụi mình sẽ làm tốt hơn.' }
+    thanksHi:'Cảm ơn bạn!', thanksLo:'Tụi em ghi nhận rồi ạ 🙏', byeHi:'Rất vui được phục vụ bạn — hẹn gặp lại 💕', byeLo:'Chủ tiệm sẽ đích thân liên lạc xin lỗi mình sớm nhất. Mong được chuộc lỗi lần sau!',
+    sorry:'Tụi em xin lỗi mình nhiều lắm 🙏', sorrySub:'Cho tụi em biết chỗ sai để sửa liền nha — chọn được nhiều ô',
+    mid:'Cảm ơn mình 💛', midSub:'Điều gì làm mình chưa trọn 5 sao ạ? (chọn được nhiều ô)',
+    phonePh:'Số điện thoại — chủ tiệm sẽ đích thân gọi xin lỗi mình (không bắt buộc)',
+    googleMsg:'Thương tụi em? Khen tụi em trên Google nha 💕', googleBtn:'⭐ Viết review trên Google',
+    iss:{wait:'Chờ lâu',attitude:'Thái độ',quality:'Chất lượng móng',price:'Giá',clean:'Vệ sinh',other:'Khác'} }
 };
 const params=new URLSearchParams(location.search);
 const token=params.get('token');
@@ -158,7 +176,21 @@ function renderLabel(){ const el=document.getElementById('rlabel'); if(el) el.te
 
 const stars=document.getElementById('stars'), go=document.getElementById('go'), err=document.getElementById('err');
 function paint(){ stars.querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.v<=rating)); }
-stars.querySelectorAll('button').forEach(b=>b.onclick=()=>{ rating=+b.dataset.v; paint(); renderLabel(); go.disabled=false; err.textContent=''; });
+
+/* nhánh theo sao: ≤3 xin lỗi + trắc nghiệm + SĐT · 4 hỏi nhẹ · 5 không hỏi gì */
+let FBISS=[];
+function fbExtra(){
+  const box=document.getElementById('fbX'); const keep=document.getElementById('fbPhone')?document.getElementById('fbPhone').value:'';
+  if(!rating||rating>=5){ box.innerHTML=''; return; }
+  const chips=Object.entries(T().iss).map(([k,l])=>`<button type="button" data-iss="${k}" class="${FBISS.includes(k)?'sel':''}">${l}</button>`).join('');
+  box.innerHTML = rating===4
+    ? `<b>${T().mid}</b><div class="sub2">${T().midSub}</div><div class="chips">${chips}</div>`
+    : `<b>${T().sorry}</b><div class="sub2">${T().sorrySub}</div><div class="chips">${chips}</div>
+       <input id="fbPhone" inputmode="tel" placeholder="${T().phonePh}" value="${keep.replace(/"/g,'')}"/>`;
+  box.querySelectorAll('[data-iss]').forEach(b=>b.onclick=()=>{
+    const k=b.dataset.iss; FBISS=FBISS.includes(k)?FBISS.filter(x=>x!==k):[...FBISS,k]; fbExtra(); });
+}
+stars.querySelectorAll('button').forEach(b=>b.onclick=()=>{ rating=+b.dataset.v; FBISS=[]; paint(); renderLabel(); fbExtra(); go.disabled=false; err.textContent=''; });
 
 // load context (what am I rating?)
 (async()=>{
@@ -178,27 +210,33 @@ go.onclick=async()=>{
   if(!token && !DEMO){ err.textContent='Missing feedback code.'; return; }
   go.disabled=true; go.querySelector('span').textContent=T().sending; err.textContent='';
   const comment=document.getElementById('comment').value.trim()||null;
-  if(DEMO){ setTimeout(()=>showThanks(),600); return; }
+  const phoneEl=document.getElementById('fbPhone');
+  if(DEMO){ setTimeout(()=>showThanks({tier:rating<=3?'low':(rating===4?'mid':'high'),review_link:rating===5?'https://g.page/demo':null}),600); return; }
   try{
     const r=await fetch(`${SUPABASE_URL}/rest/v1/rpc/fn_submit_feedback`,{
       method:'POST', headers:{ apikey:SUPABASE_ANON_KEY, Authorization:'Bearer '+SUPABASE_ANON_KEY, 'content-type':'application/json' },
-      body:JSON.stringify({ p_token:token, p_rating:rating, p_comment:comment }) });
+      body:JSON.stringify({ p_token:token, p_rating:rating, p_comment:comment,
+        p_issues:(FBISS.length?FBISS:null),
+        p_phone:(phoneEl&&phoneEl.value.trim())||null }) });
     if(!r.ok) throw new Error(await r.text());
-    showThanks();
+    showThanks(await r.json());
   }catch(e){ go.disabled=false; go.querySelector('span').textContent=T().submit; err.textContent=T().failed; }
 };
 
-function showThanks(){
-  const hi=rating>=4;
+function showThanks(res){
+  const low = rating<=3;
+  const link = res && res.review_link;
   document.getElementById('card').innerHTML=`
     <div class="done">
-      <div class="bighe">${hi?'💖':'🌷'}
+      <div class="bighe">${low?'🌷':'💖'}
         <span class="spark" style="top:-4px;left:-10px">✦</span>
         <span class="spark" style="top:0;right:-8px;animation-delay:.5s">✦</span>
         <span class="spark" style="bottom:0;left:6px;animation-delay:.7s">✧</span>
       </div>
-      <h1>${hi?T().thanksHi:T().thanksLo}</h1>
-      <p class="ctx">${hi?T().byeHi:T().byeLo}</p>
+      <h1>${low?T().thanksLo:T().thanksHi}</h1>
+      <p class="ctx">${low?T().byeLo:T().byeHi}</p>
+      ${link?`<p class="ctx" style="margin-top:12px"><b>${T().googleMsg}</b></p>
+        <button class="cta" onclick="window.open('${String(link).replace(/'/g,'')}','_blank')">${T().googleBtn}</button>`:''}
     </div>`;
 }
 

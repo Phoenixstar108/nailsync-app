@@ -110,7 +110,13 @@ const T = {
       tWait:"Mình đang trong hàng chờ", tUp:"Tới lượt mình rồi!", tUpSub:"thợ", tChair:"Ghế",
       tDoing:"Đang làm cho mình nè 💅", tDone:"Xong rồi! Mình thấy sao ạ?", tDoneSub:"Chạm sao để chấm — 5 giây thôi",
       tCmt:"Nhắn gì thêm không ạ? (không bắt buộc)", tSend:"Gửi đánh giá", tThanks:"Cảm ơn mình nhiều lắm 💖",
-      tThanksSub:"Hẹn gặp lại nha!", tCancel:"Check-in này đã được huỷ ở quầy", tBye:"Xong — đóng trang được rồi ạ"},
+      tThanksSub:"Hẹn gặp lại nha!", tCancel:"Check-in này đã được huỷ ở quầy", tBye:"Xong — đóng trang được rồi ạ",
+      fbSorry:"Tụi em xin lỗi mình nhiều lắm 🙏", fbSorrySub:"Cho tụi em biết chỗ sai để sửa liền nha — chọn được nhiều ô ạ",
+      fbMid:"Cảm ơn mình 💛", fbMidSub:"Điều gì làm mình chưa trọn 5 sao ạ? (chọn được nhiều ô)",
+      fbPhone:"Số điện thoại — chủ tiệm sẽ đích thân gọi xin lỗi mình (không bắt buộc)",
+      fbLowDone:"Tụi em ghi nhận rồi ạ 🙏", fbLowDoneSub:"Chủ tiệm sẽ liên lạc xin lỗi mình sớm nhất. Mong được chuộc lỗi lần sau!",
+      fbGoogle:"Thương tụi em? Khen tụi em trên Google nha 💕", fbGoogleBtn:"⭐ Viết review trên Google",
+      isWait:"Chờ lâu", isAtt:"Thái độ", isQual:"Chất lượng móng", isPrice:"Giá", isClean:"Vệ sinh", isOther:"Khác"},
   en:{hello:["Good morning!","Good afternoon!","Good afternoon!","Good evening!"],
       sub0:"Let's get you checked in — 30 seconds, promise", name:"Your name", or:"returning guest? just enter",
       last4:"last 4 digits of your phone", privacy:"only used to remember your usual set", next:"Continue",
@@ -127,7 +133,13 @@ const T = {
       tWait:"You're in line", tUp:"It's your turn!", tUpSub:"with", tChair:"Chair",
       tDoing:"You're being pampered 💅", tDone:"All done! How was it?", tDoneSub:"Tap the stars — takes 5 seconds",
       tCmt:"Anything you'd like us to know? (optional)", tSend:"Send rating", tThanks:"Thank you so much 💖",
-      tThanksSub:"See you next time!", tCancel:"This check-in was cancelled at the desk", tBye:"All set — you can close this page"}
+      tThanksSub:"See you next time!", tCancel:"This check-in was cancelled at the desk", tBye:"All set — you can close this page",
+      fbSorry:"We're so sorry 🙏", fbSorrySub:"Tell us what went wrong so we can fix it — pick all that apply",
+      fbMid:"Thank you 💛", fbMidSub:"What kept this from being 5 stars? (pick all that apply)",
+      fbPhone:"Phone number — the owner will personally call to apologize (optional)",
+      fbLowDone:"We hear you 🙏", fbLowDoneSub:"The owner will reach out to apologize soon. Please give us another chance!",
+      fbGoogle:"Love us? Share it on Google 💕", fbGoogleBtn:"⭐ Write a Google review",
+      isWait:"Long wait", isAtt:"Attitude", isQual:"Nail quality", isPrice:"Price", isClean:"Cleanliness", isOther:"Other"}
 };
 const t = k => T[lang][k];
 function setLang(l){ lang=l; localStorage.setItem("ns_lang",l);
@@ -356,7 +368,20 @@ async function pollTicket(){
   }
 }
 
-let RATE=0;
+/* ---------- CHẤM SAO 2 NHÁNH: ⭐1-3 xin lỗi+trắc nghiệm+SĐT · ⭐4 hỏi nhẹ · ⭐5 mời Google ---------- */
+let RATE=0, FBISS=[];
+const ISSUES=[["wait","isWait"],["attitude","isAtt"],["quality","isQual"],["price","isPrice"],["clean","isClean"],["other","isOther"]];
+function issueChips(){ return `<div style="display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin:4px 0 10px">
+  ${ISSUES.map(([k,lk])=>`<button class="chip ${FBISS.includes(k)?"sel":""}" data-iss="${k}" style="padding:9px 13px">${t(lk)}</button>`).join("")}</div>`; }
+function fbExtra(){
+  if(RATE>=5||!RATE) return "";
+  if(RATE===4) return `<div style="margin-top:4px"><b style="color:var(--rose-deep)">${t("fbMid")}</b>
+    <p class="sub" style="margin:4px 0 8px">${t("fbMidSub")}</p>${issueChips()}</div>`;
+  return `<div style="margin-top:4px"><b style="color:var(--rose-deep)">${t("fbSorry")}</b>
+    <p class="sub" style="margin:4px 0 8px">${t("fbSorrySub")}</p>${issueChips()}
+    <input id="fbPhone" inputmode="tel" placeholder="${t("fbPhone")}"
+      style="width:100%;border:1.5px solid var(--line);border-radius:14px;padding:11px;font:14px var(--sans);margin-bottom:4px"/></div>`;
+}
 function ratingScreen(r){
   $("app").innerHTML = `
     <div class="done">
@@ -365,25 +390,40 @@ function ratingScreen(r){
       <p class="sub">${t("tDoneSub")}${r.worker?` · ${t("tUpSub")} ${esc(r.worker)}`:""}</p>
       <div id="stars" style="font-size:40px;letter-spacing:6px;cursor:pointer;user-select:none;margin:6px 0 12px">
         ${[1,2,3,4,5].map(n=>`<span data-n="${n}" style="filter:grayscale(1)">⭐</span>`).join("")}</div>
+      <div id="fbX"></div>
       <textarea id="cmt" placeholder="${t("tCmt")}" style="width:100%;border:1.5px solid var(--line);border-radius:14px;padding:11px;font:14px var(--sans);min-height:64px"></textarea>
       <button class="cta" id="rateGo" disabled>${t("tSend")} →</button>
     </div>`;
+  const draw=()=>{ const ph=$("fbPhone")?$("fbPhone").value:"";
+    $("fbX").innerHTML=fbExtra();
+    if($("fbPhone")&&ph) $("fbPhone").value=ph;
+    document.querySelectorAll("#fbX [data-iss]").forEach(b=>b.onclick=()=>{
+      const k=b.dataset.iss; FBISS=FBISS.includes(k)?FBISS.filter(x=>x!==k):[...FBISS,k]; draw(); });
+  };
   document.querySelectorAll("#stars span").forEach(s=>s.onclick=()=>{
-    RATE = parseInt(s.dataset.n,10);
+    RATE = parseInt(s.dataset.n,10); FBISS=[];
     document.querySelectorAll("#stars span").forEach(x=>x.style.filter = parseInt(x.dataset.n,10)<=RATE?"none":"grayscale(1)");
-    $("rateGo").disabled=false;
+    $("rateGo").disabled=false; draw();
   });
   $("rateGo").onclick = async ()=>{
     $("rateGo").disabled=true;
-    try{ await rpc("fn_submit_feedback",{p_token:r.token, p_rating:RATE, p_comment:($("cmt").value.trim()||null)});
-      ratingThanks(); }
+    try{ const res = await rpc("fn_submit_feedback",{p_token:r.token, p_rating:RATE,
+        p_comment:($("cmt").value.trim()||null),
+        p_issues:(FBISS.length?FBISS:null),
+        p_phone:($("fbPhone")&&$("fbPhone").value.trim())||null});
+      ratingThanks(res); }
     catch(e){ $("rateGo").disabled=false; alert(e.message); }
   };
 }
-function ratingThanks(){
+function ratingThanks(res){
   clearInterval(tkTimer); localStorage.removeItem("ns_ticket");
-  $("app").innerHTML = `<div class="done"><div class="big">💖</div>
-    <h1>${t("tThanks")}</h1><p class="sub">${t("tThanksSub")} · ${t("tBye")}</p>
+  const low = res && res.tier==="low";
+  const link = res && res.review_link;
+  $("app").innerHTML = `<div class="done"><div class="big">${low?"🙏":"💖"}</div>
+    <h1>${low?t("fbLowDone"):t("tThanks")}</h1>
+    <p class="sub">${low?t("fbLowDoneSub"):t("tThanksSub")+" · "+t("tBye")}</p>
+    ${link?`<p class="sub" style="margin-top:10px"><b>${t("fbGoogle")}</b></p>
+      <button class="cta" onclick="window.open('${link.replace(/'/g,"")}','_blank')">${t("fbGoogleBtn")}</button>`:""}
     <button class="ghost" onclick="clearTicket()">${t("again")}</button></div>`;
 }
 

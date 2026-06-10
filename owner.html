@@ -1,0 +1,252 @@
+<!doctype html>
+<!-- NailSync Block 1 · owner.html — DASHBOARD CHỦ TIỆM (PIN riêng, mặc định 1357 — đổi trong Cài đặt)
+     URL: owner.html?salon=<SALON_ID>
+     Tabs: 📊 Hôm nay · ⭐ Thợ · 💬 Feedback (cờ đỏ cần gọi) · ➕ Góp ý & Cài đặt -->
+<html lang="vi">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>NailSync — Chủ tiệm</title>
+<style>
+  :root{--bg:#221219;--card:#2d1a22;--card2:#3a2230;--ink:#f6e9ef;--muted:#b89aa8;--line:#4a2c3b;
+    --rose:#ff4f8e;--rose-deep:#ff86b3;--gold:#e7b765;--green:#43c478;--red:#ff5b6e;--amber:#f0b34e;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:var(--sans);background:var(--bg);color:var(--ink);min-height:100svh}
+  .wrap{max-width:560px;margin:0 auto;padding:16px 14px 90px}
+  h1{font-size:20px;margin:0}
+  .sub{color:var(--muted);font-size:13px;margin:2px 0 0}
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .pill{border:1px solid var(--line);background:var(--card);color:var(--rose-deep);font:600 13px var(--sans);padding:8px 13px;border-radius:999px;cursor:pointer}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:15px;margin-bottom:11px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;text-align:center}
+  .stat .v{font-size:26px;font-weight:800;color:var(--rose-deep)}
+  .stat .l{color:var(--muted);font-size:12px;margin-top:3px}
+  .stat.alert{border-color:var(--red)}
+  .stat.alert .v{color:var(--red)}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{color:var(--muted);font-weight:600;text-align:left;padding:6px 4px;border-bottom:1px solid var(--line);font-size:12px}
+  td{padding:9px 4px;border-bottom:1px solid var(--line)}
+  td.r,th.r{text-align:right}
+  .fb{border-left:4px solid var(--green)}
+  .fb.mid{border-left-color:var(--amber)}
+  .fb.low{border-left-color:var(--red)}
+  .fb .meta{color:var(--muted);font-size:12px}
+  .fb .cmt{margin:7px 0;font-size:14px}
+  .tagrow{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+  .tag{background:var(--card2);border:1px solid var(--line);border-radius:999px;font-size:11.5px;padding:4px 10px;color:var(--rose-deep)}
+  .btn{border:0;border-radius:12px;font:700 13.5px var(--sans);padding:10px 14px;cursor:pointer;color:#fff;background:linear-gradient(145deg,#e23a7e,#b3164e)}
+  .btn.ghost{background:var(--card2);color:var(--rose-deep);border:1px solid var(--line)}
+  .btn.green{background:var(--green);color:#08220f}
+  .btn:disabled{opacity:.45}
+  input,textarea,select{width:100%;background:var(--card2);border:1.5px solid var(--line);border-radius:13px;color:var(--ink);font:14px var(--sans);padding:11px}
+  input:focus,textarea:focus{outline:0;border-color:var(--rose)}
+  label{font-size:12.5px;color:var(--muted);display:block;margin:10px 0 5px}
+  .tabs{position:fixed;bottom:0;left:0;right:0;background:#1a0d13;border-top:1px solid var(--line);display:flex;z-index:5}
+  .tabs button{flex:1;border:0;background:transparent;color:var(--muted);font:600 11.5px var(--sans);padding:9px 2px 12px;cursor:pointer;position:relative}
+  .tabs button.on{color:var(--rose-deep)}
+  .tabs .ico{font-size:19px;display:block;margin-bottom:2px}
+  .badge{position:absolute;top:4px;right:18%;background:var(--red);color:#fff;border-radius:999px;font-size:10px;font-weight:800;padding:1px 6px}
+  .phone{color:var(--gold);font-weight:700;text-decoration:none}
+  .stt{font-size:11.5px;font-weight:800;border-radius:8px;padding:3px 8px}
+  .stt.new{background:#54121d;color:var(--red)}
+  .stt.contacted{background:#4a3a12;color:var(--amber)}
+  .stt.resolved{background:#11401f;color:var(--green)}
+  .center{text-align:center}
+  .login{max-width:360px;margin:14vh auto 0;text-align:center}
+  .login input{text-align:center;font-size:24px;letter-spacing:8px}
+  .hr{border:none;border-top:1px solid var(--line);margin:13px 0}
+  .qbox{background:var(--card2);border:1px dashed var(--line);border-radius:13px;padding:11px;font-size:13.5px;color:var(--rose-deep);margin-bottom:8px}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="tabs" id="tabs" style="display:none">
+  <button data-t="home" class="on"><span class="ico">📊</span>Hôm nay</button>
+  <button data-t="workers"><span class="ico">⭐</span>Thợ</button>
+  <button data-t="fb"><span class="ico">💬</span>Feedback<span class="badge" id="fbBadge" style="display:none"></span></button>
+  <button data-t="more"><span class="ico">➕</span>Góp ý · Cài đặt</button>
+</div>
+
+<script>
+const SUPABASE_URL = "https://liavvyeklmixeyudfwxm.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpYXZ2eWVrbG1peGV5dWRmd3htIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODgyOTAsImV4cCI6MjA5NjM2NDI5MH0.vzUiOMRkWYSZ4zGejqKAvq0_-C3YIrM_wa0fTyOmT-E";
+const SALON = new URLSearchParams(location.search).get("salon");
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+async function rpc(fn,args){
+  const r=await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`,{method:"POST",
+    headers:{apikey:SUPABASE_ANON_KEY,Authorization:"Bearer "+SUPABASE_ANON_KEY,"Content-Type":"application/json"},
+    body:JSON.stringify(args||{})});
+  const tx=await r.text(); let j=null; try{ j=tx?JSON.parse(tx):null; }catch(e){}
+  if(!r.ok){ const m=(j&&(j.message||j.hint))||tx; throw new Error(m); }
+  return j;
+}
+let TOKEN=localStorage.getItem("ns_owner_token")||null, ST=null, TAB="home", timer=null;
+
+const ISS_VI={wait:"Chờ lâu",attitude:"Thái độ",quality:"Chất lượng móng",price:"Giá",clean:"Vệ sinh",other:"Khác"};
+const QUESTIONS=[
+  "Phần nào trong app làm anh/chị thấy KHÓ DÙNG nhất?",
+  "Nếu được thêm đúng 1 tính năng, anh/chị muốn gì nhất?",
+  "Có số liệu/báo cáo nào anh/chị muốn xem mỗi ngày mà app chưa có?",
+  "Thợ và lễ tân than phiền điều gì về app nhiều nhất?",
+  "Điều gì suýt làm anh/chị KHÔNG muốn dùng app này?"];
+const qToday=QUESTIONS[Math.floor(Date.now()/864e5)%QUESTIONS.length];
+
+/* ---------- LOGIN ---------- */
+function loginScreen(msg){
+  $("tabs").style.display="none";
+  $("app").innerHTML=`<div class="login">
+    <div style="font-size:46px">👑</div>
+    <h1>Màn chủ tiệm</h1>
+    <p class="sub">Nhập PIN chủ (khác PIN nhân viên)</p>
+    <div style="height:14px"></div>
+    <input id="pin" inputmode="numeric" type="password" maxlength="8" placeholder="••••"/>
+    <div style="height:10px"></div>
+    <button class="btn" style="width:100%" onclick="doLogin()">Vào dashboard</button>
+    <p class="sub" id="lerr" style="color:var(--red)">${esc(msg||"")}</p></div>`;
+  $("pin").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
+}
+async function doLogin(){
+  try{
+    const r=await rpc("owner_login",{p_salon:SALON,p_pin:$("pin").value.trim()});
+    if(r.status!=="ok"){ $("lerr").textContent=r.message+(r.remaining!=null?` (còn ${r.remaining} lần)`:""); return; }
+    TOKEN=r.token; localStorage.setItem("ns_owner_token",TOKEN); boot();
+  }catch(e){ $("lerr").textContent=e.message; }
+}
+function logout(){ localStorage.removeItem("ns_owner_token"); TOKEN=null; clearInterval(timer); loginScreen(); }
+
+/* ---------- DATA ---------- */
+async function refresh(){
+  try{ ST=await rpc("owner_state",{p_token:TOKEN}); render(); }
+  catch(e){ if(String(e.message).startsWith("AUTH")) return loginScreen("Phiên hết hạn — đăng nhập lại nha"); }
+}
+function boot(){ $("tabs").style.display="flex"; refresh(); clearInterval(timer); timer=setInterval(refresh,30000); }
+
+/* ---------- RENDER ---------- */
+document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{
+  TAB=b.dataset.t;
+  document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x===b));
+  render();
+});
+function header(){
+  return `<div class="top"><div><h1>${esc(ST.salon_name||"NailSync")} 👑</h1>
+    <p class="sub">Dashboard chủ tiệm · tự cập nhật 30s</p></div>
+    <button class="pill" onclick="logout()">Thoát</button></div>`;
+}
+function render(){
+  if(!ST) return;
+  const need=ST.need_call||0;
+  $("fbBadge").style.display=need?"inline":"none"; $("fbBadge").textContent=need;
+  if(TAB==="home") renderHome();
+  else if(TAB==="workers") renderWorkers();
+  else if(TAB==="fb") renderFb();
+  else renderMore();
+}
+function renderHome(){
+  const t=ST.today||{};
+  $("app").innerHTML=header()+`
+    <div class="grid2">
+      <div class="stat"><div class="v">${t.customers||0}</div><div class="l">khách xong hôm nay</div></div>
+      <div class="stat"><div class="v">$${Number(t.est_revenue||0).toLocaleString()}</div><div class="l">doanh thu ước tính*</div></div>
+      <div class="stat"><div class="v">${t.avg_rating??"—"}</div><div class="l">sao trung bình (${t.ratings_in||0} đánh giá)</div></div>
+      <div class="stat"><div class="v">${ST.drinks_today||0}</div><div class="l">ly nước đã phục vụ</div></div>
+    </div>
+    <div class="stat alert" style="margin-top:10px;cursor:pointer" onclick="document.querySelector('[data-t=fb]').click()">
+      <div class="v">${ST.need_call||0} 🔴</div><div class="l">feedback CẦN GỌI LẠI — bấm để xem</div></div>
+    <p class="sub" style="margin-top:10px">*Cộng từ giá tạm tính lúc check-in — POS thật sẽ chính xác hơn (block sau).</p>`;
+}
+function renderWorkers(){
+  const ws=ST.workers||[];
+  $("app").innerHTML=header()+`<div class="card">
+    <b>⭐ Review thợ — 30 ngày</b>
+    <table style="margin-top:8px"><tr><th>Thợ</th><th class="r">Lượt</th><th class="r">Sao TB</th><th class="r">≤3⭐</th></tr>
+    ${ws.map(w=>`<tr><td><b>${esc(w.name)}</b></td><td class="r">${w.jobs_30d}</td>
+      <td class="r">${w.avg_rating??"—"}</td>
+      <td class="r" style="color:${w.low_30d>0?"var(--red)":"var(--muted)"};font-weight:${w.low_30d>0?800:400}">${w.low_30d}</td></tr>`).join("")||"<tr><td colspan=4 class='sub'>Chưa có lượt nào</td></tr>"}
+    </table></div>`;
+}
+function renderFb(){
+  const fbs=ST.feedbacks||[];
+  $("app").innerHTML=header()+
+    (fbs.length?"":`<div class="card center sub">Chưa có feedback trong 7 ngày</div>`)+
+    fbs.map(f=>{
+      const cls=f.rating<=3?"low":(f.rating===4?"mid":"");
+      const stars="⭐".repeat(f.rating);
+      const tags=(f.issues||[]).map(k=>`<span class="tag">${esc(ISS_VI[k]||k)}</span>`).join("");
+      const act = f.rating<=3 ? (
+        f.recovery==="resolved" ? `<span class="stt resolved">✓ đã xử lý</span>` :
+        `<span class="stt ${f.recovery}">${f.recovery==="new"?"🔴 cần gọi":"🟡 đã gọi"}</span>
+         ${f.recovery==="new"?`<button class="btn ghost" onclick="setRec('${f.id}','contacted')">📞 Đã gọi</button>`:""}
+         <button class="btn green" onclick="setRec('${f.id}','resolved')">✓ Đã xử lý</button>`) : "";
+      return `<div class="card fb ${cls}">
+        <div class="meta">${esc(f.at)} · thợ <b>${esc(f.worker||"—")}</b>${f.customer?` · khách <b>${esc(f.customer)}</b>`:""}</div>
+        <div style="font-size:17px;margin-top:4px">${stars} <span class="meta">(${f.rating})</span></div>
+        ${f.comment?`<div class="cmt">"${esc(f.comment)}"</div>`:""}
+        ${tags?`<div class="tagrow">${tags}</div>`:""}
+        ${f.phone?`<div style="margin:6px 0">📞 <a class="phone" href="tel:${esc(f.phone)}">${esc(f.phone)}</a></div>`:""}
+        ${f.note?`<div class="meta">Ghi chú: ${esc(f.note)}</div>`:""}
+        <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">${act}</div>
+      </div>`;}).join("");
+}
+async function setRec(id,status){
+  let note=null;
+  if(status==="resolved") note=prompt("Ghi chú xử lý (vd: đã gọi xin lỗi, tặng 20% lần sau) — bỏ trống cũng được:")||null;
+  try{ await rpc("owner_set_recovery",{p_token:TOKEN,p_feedback:id,p_status:status,p_note:note}); refresh(); }
+  catch(e){ alert(e.message); }
+}
+function renderMore(){
+  const cfg=ST.config||{};
+  const sugs=ST.suggestions||[];
+  $("app").innerHTML=header()+`
+    <div class="card">
+      <b>💡 Góp ý cho NailSync</b>
+      <p class="sub">Câu trả lời đi thẳng tới đội phát triển app — giúp app hợp với tiệm mình hơn.</p>
+      <div class="qbox" style="margin-top:9px">❓ ${esc(qToday)}</div>
+      <textarea id="sg" rows="3" placeholder="Anh/chị cứ nói thẳng ạ..."></textarea>
+      <div style="height:9px"></div>
+      <button class="btn" onclick="sendSug()">Gửi góp ý</button>
+      ${sugs.length?`<div class="hr"></div><p class="sub">Đã gửi gần đây:</p>`+
+        sugs.map(s=>`<div class="meta" style="margin:6px 0">· ${esc(s.content)} <span style="opacity:.6">(${esc(s.at)})</span></div>`).join(""):""}
+    </div>
+    <div class="card">
+      <b>⚙️ Link Google review</b>
+      <label>Dán link trang review của tiệm (Google Maps → Share review form)</label>
+      <input id="rlink" placeholder="https://g.page/r/..." value="${esc(cfg.review_link||"")}"/>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:11px">
+        <input type="checkbox" id="rgate" style="width:auto" ${cfg.review_gating!==false?"checked":""}/>
+        <span>Chỉ khách <b>5⭐</b> mới thấy nút Google (tắt = khách nào gửi xong cũng thấy)</span></label>
+      <div style="height:9px"></div>
+      <button class="btn" onclick="saveLink()">Lưu</button>
+    </div>
+    <div class="card">
+      <b>🔑 Đổi PIN chủ</b>
+      <label>PIN mới (≥4 số) — PIN nhân viên không đổi</label>
+      <input id="npin" inputmode="numeric" type="password" maxlength="8" placeholder="••••"/>
+      <div style="height:9px"></div>
+      <button class="btn" onclick="savePin()">Đổi PIN</button>
+    </div>`;
+}
+async function sendSug(){
+  const v=$("sg").value.trim(); if(!v) return;
+  try{ await rpc("owner_suggest",{p_token:TOKEN,p_question:qToday,p_content:v}); $("sg").value=""; refresh(); alert("Đã gửi — cảm ơn anh/chị! 🙏"); }
+  catch(e){ alert(e.message); }
+}
+async function saveLink(){
+  try{ await rpc("owner_set_review_link",{p_token:TOKEN,p_url:($("rlink").value.trim()||null),p_gating:$("rgate").checked}); refresh(); alert("Đã lưu ✓"); }
+  catch(e){ alert(e.message); }
+}
+async function savePin(){
+  const v=$("npin").value.trim(); if(v.length<4) return alert("PIN tối thiểu 4 số");
+  try{ await rpc("owner_set_pin",{p_token:TOKEN,p_new:v}); $("npin").value=""; alert("Đã đổi PIN chủ ✓"); }
+  catch(e){ alert(e.message); }
+}
+
+/* ---------- BOOT ---------- */
+if(!SALON){ $("app").innerHTML="<h1>Thiếu mã tiệm trong link</h1>"; }
+else if(TOKEN){ boot(); }
+else loginScreen();
+</script>
+</body>
+</html>
