@@ -86,7 +86,9 @@
 const SUPABASE_URL = "https://liavvyeklmixeyudfwxm.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpYXZ2eWVrbG1peGV5dWRmd3htIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODgyOTAsImV4cCI6MjA5NjM2NDI5MH0.vzUiOMRkWYSZ4zGejqKAvq0_-C3YIrM_wa0fTyOmT-E";
 /* ========================================== */
-const SALON = new URLSearchParams(location.search).get("salon");
+const QS = new URLSearchParams(location.search);
+const SALON = QS.get("salon");
+const KIOSK = QS.get("kiosk")==="1";   // tablet ở quầy: không giữ vé, mỗi khách check-in xong là về màn đầu
 const $ = id => document.getElementById(id);
 const esc = s => (s??"").toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
@@ -103,7 +105,12 @@ const T = {
       doneT:"Xong rồi nè", doneSub:"Mời mình ngồi nghỉ — lễ tân gọi mình liền ạ",
       ahead:"Trước mình còn", people:"khách", wait:"chờ khoảng", drinkCta:"Uống gì trong lúc chờ nè? — miễn phí",
       again:"Check-in khách tiếp theo", noSalon:"Thiếu mã tiệm trong QR", fail:"Gửi không được, mình gặp lễ tân giúp em nha",
-      back:"‹ Quay lại", estNote:"giá tạm tính — lễ tân xác nhận lại với mình ạ"},
+      back:"‹ Quay lại", estNote:"giá tạm tính — lễ tân xác nhận lại với mình ạ",
+      keepOpen:"Giữ trang này mở nha — tới lượt mình nó tự báo, xong nó tự hiện chỗ chấm điểm 💕",
+      tWait:"Mình đang trong hàng chờ", tUp:"Tới lượt mình rồi!", tUpSub:"thợ", tChair:"Ghế",
+      tDoing:"Đang làm cho mình nè 💅", tDone:"Xong rồi! Mình thấy sao ạ?", tDoneSub:"Chạm sao để chấm — 5 giây thôi",
+      tCmt:"Nhắn gì thêm không ạ? (không bắt buộc)", tSend:"Gửi đánh giá", tThanks:"Cảm ơn mình nhiều lắm 💖",
+      tThanksSub:"Hẹn gặp lại nha!", tCancel:"Check-in này đã được huỷ ở quầy", tBye:"Xong — đóng trang được rồi ạ"},
   en:{hello:["Good morning!","Good afternoon!","Good afternoon!","Good evening!"],
       sub0:"Let's get you checked in — 30 seconds, promise", name:"Your name", or:"returning guest? just enter",
       last4:"last 4 digits of your phone", privacy:"only used to remember your usual set", next:"Continue",
@@ -115,7 +122,12 @@ const T = {
       doneT:"You're all set", doneSub:"Have a seat — reception will call you in a moment",
       ahead:"Ahead of you:", people:"guests", wait:"about", drinkCta:"Something to sip while you wait? — free",
       again:"Next guest check-in", noSalon:"Missing salon code in QR", fail:"Couldn't send — please see reception",
-      back:"‹ Back", estNote:"estimate only — reception will confirm with you"}
+      back:"‹ Back", estNote:"estimate only — reception will confirm with you",
+      keepOpen:"Keep this page open — it'll buzz when it's your turn and show the rating right here 💕",
+      tWait:"You're in line", tUp:"It's your turn!", tUpSub:"with", tChair:"Chair",
+      tDoing:"You're being pampered 💅", tDone:"All done! How was it?", tDoneSub:"Tap the stars — takes 5 seconds",
+      tCmt:"Anything you'd like us to know? (optional)", tSend:"Send rating", tThanks:"Thank you so much 💖",
+      tThanksSub:"See you next time!", tCancel:"This check-in was cancelled at the desk", tBye:"All set — you can close this page"}
 };
 const t = k => T[lang][k];
 function setLang(l){ lang=l; localStorage.setItem("ns_lang",l);
@@ -271,28 +283,108 @@ async function submit(repeat){
           addons:S.addons.map(k=>{const a=MENU.addons.find(x=>x.k===k);return a?L(a)+" +$"+a.price:k;}),
           est_price:price(), est_minutes:minutes() };
     const service = repeat ? "hands" : S.group.map;
-    await rpc("fn_customer_checkin_v2",{p_salon:SALON, p_service:service, p_intake:intake,
+    const res = await rpc("fn_customer_checkin_v2",{p_salon:SALON, p_service:service, p_intake:intake,
       p_display_name:(S.name||null),
       p_phone_last4:S.last4||null, p_requested_worker_id:S.worker, p_party:S.party});
-    thanks(repeat);
+    TICKET = {id:res.checkin_id, name:S.name||(S.ret&&S.ret.display_name)||"", t:Date.now()};
+    if(!KIOSK) localStorage.setItem("ns_ticket", JSON.stringify(TICKET));
+    showEst(false); step=99;
+    ticketScreen(true);
   }catch(e){ alert(t("fail")+"\n"+e.message); }
 }
 
-async function thanks(repeat){
-  showEst(false);
-  let q={ahead:null}; try{ q=await rpc("fn_queue_snapshot",{p_salon:SALON}); }catch(e){}
-  const nm = S.name||(S.ret&&S.ret.display_name)||"";
-  step=99;
-  $("app").innerHTML = `
+/* ---------- VÉ THEO DÕI SỐNG: chờ → tới lượt (chuông) → đang làm → TỰ BẬT chấm sao ---------- */
+let TICKET=null, tkTimer=null, tkPhase="", AC=null;
+function ding(){ try{
+    if(!AC) AC = new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==="suspended") AC.resume();
+    [0,.3].forEach(t0=>{ const o=AC.createOscillator(),g=AC.createGain();
+      o.connect(g); g.connect(AC.destination); o.frequency.value=1175;
+      g.gain.setValueAtTime(.0001,AC.currentTime+t0);
+      g.gain.exponentialRampToValueAtTime(.4,AC.currentTime+t0+.02);
+      g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+t0+.3);
+      o.start(AC.currentTime+t0); o.stop(AC.currentTime+t0+.32); });
+  }catch(e){}
+  if(navigator.vibrate) navigator.vibrate([250,120,400]); }
+
+function clearTicket(){ TICKET=null; tkPhase=""; clearInterval(tkTimer);
+  localStorage.removeItem("ns_ticket"); S=resetSel(); step=0; render(); }
+
+function ticketScreen(first){
+  step=99; showEst(false);
+  if(first){ $("app").innerHTML = `
     <div class="done">
       <div class="big">💖</div>
-      <h1>${t("doneT")}${nm?(lang==="vi"?" "+esc(nm)+" ơi!":", "+esc(nm)+"!"):"!"}</h1>
+      <h1>${t("doneT")}${TICKET.name?(lang==="vi"?" "+esc(TICKET.name)+" ơi!":", "+esc(TICKET.name)+"!"):"!"}</h1>
       <p class="sub">${t("doneSub")}</p>
-      ${q.ahead!=null?`<div class="qrow">⏱ ${t("ahead")} <b>${Math.max(q.ahead-1,0)} ${t("people")}</b> · ${t("wait")} ~${Math.max((q.ahead-1)*25,5)} ${t("mins")}</div>`:""}
+      <div class="tip" style="text-align:left">📲 ${t("keepOpen")}</div>
+      <div id="tkBody"></div>
       <button class="cta" onclick="location.href='drink.html?salon=${SALON}&waiting=1'">🍹 ${t("drinkCta")}</button>
-      <button class="ghost" onclick="S=resetSel();step=0;render()">${t("again")}</button>
+      <button class="ghost" onclick="clearTicket()">${t("again")}</button>
+    </div>`; }
+  clearInterval(tkTimer);
+  pollTicket();
+  tkTimer = setInterval(pollTicket, 7000);
+}
+
+async function pollTicket(){
+  if(!TICKET) return;
+  let r; try{ r = await rpc("fn_track_checkin",{p_checkin_id:TICKET.id}); }catch(e){ return; }
+  if(!r.found || r.cstatus==="cancelled"){
+    if(tkPhase!=="cancelled"){ tkPhase="cancelled";
+      $("app").innerHTML = `<div class="done"><div class="big">🙏</div><h1>${t("tCancel")}</h1>
+        <button class="ghost" onclick="clearTicket()">${t("again")}</button></div>`; }
+    clearInterval(tkTimer); localStorage.removeItem("ns_ticket"); return;
+  }
+  const done = r.sstatus==="completed" || r.sstatus==="feedback_sent";
+  if(done && r.token){
+    clearInterval(tkTimer);
+    if(r.feedback_done){ ratingThanks(); return; }
+    if(tkPhase!=="rate"){ tkPhase="rate"; ding(); ratingScreen(r); }
+    return;
+  }
+  const box = $("tkBody"); if(!box) return;
+  if(r.sstatus==="pending" || r.sstatus==="in_progress"){
+    if(tkPhase!=="up" && r.sstatus==="pending"){ tkPhase="up"; ding(); }
+    if(r.sstatus==="in_progress") tkPhase="doing";
+    box.innerHTML = `<div class="qrow" style="font-size:16px;font-weight:700;color:var(--rose-deep)">
+        ${r.sstatus==="pending"?`📢 ${t("tUp")}`:`💅 ${t("tDoing")}`}</div>
+      <div class="qrow">${t("tChair")} <b>${r.chair??"—"}</b>${r.worker?` · ${t("tUpSub")} <b>${esc(r.worker)}</b>`:""}</div>`;
+  } else {
+    tkPhase="wait";
+    box.innerHTML = `<div class="qrow">⏳ ${t("tWait")} — ${t("ahead")} <b>${r.ahead} ${t("people")}</b> · ${t("wait")} ~${Math.max(r.ahead*25,5)} ${t("mins")}</div>`;
+  }
+}
+
+let RATE=0;
+function ratingScreen(r){
+  $("app").innerHTML = `
+    <div class="done">
+      <div class="big">✨</div>
+      <h1>${t("tDone")}</h1>
+      <p class="sub">${t("tDoneSub")}${r.worker?` · ${t("tUpSub")} ${esc(r.worker)}`:""}</p>
+      <div id="stars" style="font-size:40px;letter-spacing:6px;cursor:pointer;user-select:none;margin:6px 0 12px">
+        ${[1,2,3,4,5].map(n=>`<span data-n="${n}" style="filter:grayscale(1)">⭐</span>`).join("")}</div>
+      <textarea id="cmt" placeholder="${t("tCmt")}" style="width:100%;border:1.5px solid var(--line);border-radius:14px;padding:11px;font:14px var(--sans);min-height:64px"></textarea>
+      <button class="cta" id="rateGo" disabled>${t("tSend")} →</button>
     </div>`;
-  setTimeout(()=>{ if(step===99){ S=resetSel(); step=0; render(); } }, 60000);
+  document.querySelectorAll("#stars span").forEach(s=>s.onclick=()=>{
+    RATE = parseInt(s.dataset.n,10);
+    document.querySelectorAll("#stars span").forEach(x=>x.style.filter = parseInt(x.dataset.n,10)<=RATE?"none":"grayscale(1)");
+    $("rateGo").disabled=false;
+  });
+  $("rateGo").onclick = async ()=>{
+    $("rateGo").disabled=true;
+    try{ await rpc("fn_submit_feedback",{p_token:r.token, p_rating:RATE, p_comment:($("cmt").value.trim()||null)});
+      ratingThanks(); }
+    catch(e){ $("rateGo").disabled=false; alert(e.message); }
+  };
+}
+function ratingThanks(){
+  clearInterval(tkTimer); localStorage.removeItem("ns_ticket");
+  $("app").innerHTML = `<div class="done"><div class="big">💖</div>
+    <h1>${t("tThanks")}</h1><p class="sub">${t("tThanksSub")} · ${t("tBye")}</p>
+    <button class="ghost" onclick="clearTicket()">${t("again")}</button></div>`;
 }
 
 (async ()=>{
@@ -302,6 +394,12 @@ async function thanks(repeat){
     MENU = r.menu; WORKERS = r.workers||[];
     $("brand").innerHTML = esc(r.salon_name||"NailSync");
     setLang(lang);
+    // khách mở lại trang khi còn vé sống (<6 tiếng) → quay lại màn theo dõi, không bắt check-in lại
+    if(!KIOSK){ try{
+      const tk = JSON.parse(localStorage.getItem("ns_ticket")||"null");
+      if(tk && tk.id && Date.now()-tk.t < 6*3600*1000){ TICKET = tk; ticketScreen(true); }
+      else localStorage.removeItem("ns_ticket");
+    }catch(e){} }
   }catch(e){ $("app").innerHTML=`<h1>😢</h1><p class="sub">${esc(e.message)}</p>`; }
 })();
 </script>
