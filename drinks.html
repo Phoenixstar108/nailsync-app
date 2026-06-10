@@ -136,7 +136,7 @@ async function refresh(){
   $("doneChip").textContent=`hôm nay: ${DATA.delivered_today||0} ly`;
   $("list").innerHTML=q.length?q.map(o=>`
     <div class="card">
-      <div class="chair">Ghế<br>${o.chair}</div>
+      <div class="chair">${o.chair?`Ghế<br>${o.chair}`:`<span style="font-size:13px">KHU<br>CHỜ</span>`}</div>
       <div style="flex:1">
         <div class="drink">${esc(o.drink)}</div>
         <div class="meta">${esc(o.customer||"khách")} · ${ago(o.ordered_at)}</div>

@@ -50,7 +50,9 @@ const SUPABASE_URL = "https://liavvyeklmixeyudfwxm.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpYXZ2eWVrbG1peGV5dWRmd3htIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODgyOTAsImV4cCI6MjA5NjM2NDI5MH0.vzUiOMRkWYSZ4zGejqKAvq0_-C3YIrM_wa0fTyOmT-E";
 /* ========================================== */
 const qs = new URLSearchParams(location.search);
-const SALON = qs.get("salon"); const CHAIR = parseInt(qs.get("chair")||"0",10);
+const SALON = qs.get("salon");
+const WAITING = qs.get("waiting")==="1";
+const CHAIR = WAITING ? null : parseInt(qs.get("chair")||"0",10);
 let pick=null, ctx=null;
 const $=id=>document.getElementById(id);
 const esc=s=>(s??"").toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -71,12 +73,14 @@ function choose(v,el){
 }
 
 async function load(){
-  if(!SALON||!CHAIR){ $("app").innerHTML="<h1>Thiếu mã ghế trong QR</h1>"; return; }
+  if(!SALON||(!CHAIR&&!WAITING)){ $("app").innerHTML="<h1>Thiếu mã ghế trong QR</h1>"; return; }
   try{
     ctx = await rpc("fn_get_chair_context",{p_salon:SALON,p_chair:CHAIR});
     $("hello").textContent = ctx.customer_name ? `Chào ${ctx.customer_name}! 🌸` : "Gọi nước nè 🌸";
-    $("chairLine").textContent = `Ghế ${CHAIR} · ${ctx.salon_name||""} — đem tận nơi, khỏi đứng dậy`;
-    if(!ctx.customer_name) $("nameBox").style.display="block";
+    $("chairLine").textContent = WAITING
+      ? `Khu chờ · ${ctx.salon_name||""} — đem tới tận tay mình nha`
+      : `Ghế ${CHAIR} · ${ctx.salon_name||""} — đem tận nơi, khỏi đứng dậy`;
+    if(!ctx.customer_name || WAITING) $("nameBox").style.display="block";
     if(ctx.preferred_drink){
       $("favBox").innerHTML = `<div class="fav" id="fav">⭐ <b>Như mọi lần: ${esc(ctx.preferred_drink)}?</b><br><span style="font-size:12.5px;color:var(--muted)">chạm để chọn món tủ của bạn</span></div>`;
       $("fav").onclick = ()=>choose(ctx.preferred_drink, $("fav"));
@@ -96,7 +100,7 @@ $("go").onclick = async ()=>{
       $("app").innerHTML=`<div class="big">🫶</div><h1>Từ từ nha!</h1><div class="sub">${esc(r.message)}</div>`;
     }else{
       $("app").innerHTML=`<div class="big">🍹</div><h1>Đã gọi ${esc(pick)}!</h1>
-        <div class="sub">Quầy nước nhận rồi — đem tới ghế ${CHAIR} liền. Cứ thư giãn nhé 💆</div>`;
+        <div class="sub">Quầy nước nhận rồi — ${WAITING?"đem ra khu chờ cho mình liền":"đem tới ghế "+CHAIR+" liền"}. Cứ thư giãn nhé 💆</div>`;
     }
   }catch(e){ $("go").disabled=false; $("go").textContent="Gửi order 🛎️"; alert("Gửi không được: "+e.message); }
 };

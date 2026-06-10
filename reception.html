@@ -241,6 +241,9 @@ function render(){
         ${c.requested_worker?`<span class="badge req">Yêu cầu: ${esc(c.requested_worker)}</span>`:""}
       </div>
       <div class="meta">Muốn: <b>${svcName(c.requested_service)}</b> · check-in ${ago(c.created_at)} trước</div>
+      ${c.intake?`<div class="meta" style="background:var(--cream);border:1px dashed var(--line);border-radius:10px;padding:6px 8px;margin-top:6px">
+        🛒 ${c.intake.repeat?`Làm lại bộ cũ: ${esc(c.intake.summary||"")}`:`${esc(c.intake.package_label||"")}${(c.intake.options||[]).length?` · ${c.intake.options.map(esc).join(", ")}`:""}${(c.intake.addons||[]).length?` · +${c.intake.addons.map(esc).join(", +")}`:""}`}
+        ${c.est_price?` · <b>~$${c.est_price}</b>`:""}${c.party_size>1?` · 👥 ${c.party_size} người`:""}</div>`:""}
       <div class="actions">
         <button class="btn" onclick="openConfirm('${c.id}')">✓ Xác nhận</button>
         <button class="btn ghost small" onclick="openCancel('${c.id}')">Huỷ</button>
