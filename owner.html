@@ -1,7 +1,12 @@
 <!doctype html>
-<!-- NailSync Block 1 · owner.html — DASHBOARD CHỦ TIỆM (PIN riêng, mặc định 1357 — đổi trong Cài đặt)
-     URL: owner.html?salon=<SALON_ID>
-     Tabs: 📊 Hôm nay · ⭐ Thợ · 💬 Feedback (cờ đỏ cần gọi) · ➕ Góp ý & Cài đặt -->
+<!-- NailSync Block 1 · owner.html v2 — DASHBOARD CHỦ TIỆM
+     PIN chủ riêng (pilot 1357). 5 tab:
+       📊 Hôm nay  — số liệu live + so hôm qua + trên sàn + chart giờ + 💡 insight
+       📦 Cuối ngày — digest chốt sổ từng ngày + TRẮC NGHIỆM 1 câu/ngày (owner_pulse) + lịch sử 7 ngày
+       ⭐ Thợ      — hôm nay + 30 ngày
+       💬 Feedback — lọc 🔴/🟡/✓, gọi lại, xử lý
+       ➕ Thêm     — góp ý app + link Google + gating + đổi PIN
+     URL: owner.html?salon=<SALON_ID> -->
 <html lang="vi">
 <head>
 <meta charset="utf-8"/>
@@ -13,18 +18,19 @@
     --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   body{margin:0;font-family:var(--sans);background:var(--bg);color:var(--ink);min-height:100svh}
-  .wrap{max-width:560px;margin:0 auto;padding:16px 14px 90px}
+  .wrap{max-width:580px;margin:0 auto;padding:16px 14px 92px}
   h1{font-size:20px;margin:0}
   .sub{color:var(--muted);font-size:13px;margin:2px 0 0}
-  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px}
   .pill{border:1px solid var(--line);background:var(--card);color:var(--rose-deep);font:600 13px var(--sans);padding:8px 13px;border-radius:999px;cursor:pointer}
   .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:15px;margin-bottom:11px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .stat{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;text-align:center}
-  .stat .v{font-size:26px;font-weight:800;color:var(--rose-deep)}
-  .stat .l{color:var(--muted);font-size:12px;margin-top:3px}
-  .stat.alert{border-color:var(--red)}
-  .stat.alert .v{color:var(--red)}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:13px;text-align:center}
+  .stat .v{font-size:24px;font-weight:800;color:var(--rose-deep)}
+  .stat .l{color:var(--muted);font-size:11.5px;margin-top:3px}
+  .stat .d{font-size:11.5px;font-weight:700;margin-top:2px}
+  .up{color:var(--green)} .down{color:var(--red)} .flat{color:var(--muted)}
+  .stat.alert{border-color:var(--red)} .stat.alert .v{color:var(--red)}
   table{width:100%;border-collapse:collapse;font-size:13.5px}
   th{color:var(--muted);font-weight:600;text-align:left;padding:6px 4px;border-bottom:1px solid var(--line);font-size:12px}
   td{padding:9px 4px;border-bottom:1px solid var(--line)}
@@ -39,15 +45,15 @@
   .btn{border:0;border-radius:12px;font:700 13.5px var(--sans);padding:10px 14px;cursor:pointer;color:#fff;background:linear-gradient(145deg,#e23a7e,#b3164e)}
   .btn.ghost{background:var(--card2);color:var(--rose-deep);border:1px solid var(--line)}
   .btn.green{background:var(--green);color:#08220f}
-  .btn:disabled{opacity:.45}
-  input,textarea,select{width:100%;background:var(--card2);border:1.5px solid var(--line);border-radius:13px;color:var(--ink);font:14px var(--sans);padding:11px}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  input,textarea{width:100%;background:var(--card2);border:1.5px solid var(--line);border-radius:13px;color:var(--ink);font:14px var(--sans);padding:11px}
   input:focus,textarea:focus{outline:0;border-color:var(--rose)}
   label{font-size:12.5px;color:var(--muted);display:block;margin:10px 0 5px}
   .tabs{position:fixed;bottom:0;left:0;right:0;background:#1a0d13;border-top:1px solid var(--line);display:flex;z-index:5}
-  .tabs button{flex:1;border:0;background:transparent;color:var(--muted);font:600 11.5px var(--sans);padding:9px 2px 12px;cursor:pointer;position:relative}
+  .tabs button{flex:1;border:0;background:transparent;color:var(--muted);font:600 10.5px var(--sans);padding:9px 1px 11px;cursor:pointer;position:relative}
   .tabs button.on{color:var(--rose-deep)}
-  .tabs .ico{font-size:19px;display:block;margin-bottom:2px}
-  .badge{position:absolute;top:4px;right:18%;background:var(--red);color:#fff;border-radius:999px;font-size:10px;font-weight:800;padding:1px 6px}
+  .tabs .ico{font-size:18px;display:block;margin-bottom:2px}
+  .badge{position:absolute;top:3px;right:14%;background:var(--red);color:#fff;border-radius:999px;font-size:10px;font-weight:800;padding:1px 6px}
   .phone{color:var(--gold);font-weight:700;text-decoration:none}
   .stt{font-size:11.5px;font-weight:800;border-radius:8px;padding:3px 8px}
   .stt.new{background:#54121d;color:var(--red)}
@@ -58,15 +64,32 @@
   .login input{text-align:center;font-size:24px;letter-spacing:8px}
   .hr{border:none;border-top:1px solid var(--line);margin:13px 0}
   .qbox{background:var(--card2);border:1px dashed var(--line);border-radius:13px;padding:11px;font-size:13.5px;color:var(--rose-deep);margin-bottom:8px}
+  .insight{background:linear-gradient(145deg,#3a2230,#2d1a22);border:1px solid var(--line);border-radius:14px;padding:11px 13px;font-size:13.5px;margin:6px 0;line-height:1.45}
+  .floor{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  .floor:last-child{border-bottom:0}
+  .chairno{background:var(--card2);border:1px solid var(--line);border-radius:10px;font-weight:800;color:var(--rose-deep);padding:6px 10px;font-size:13px;min-width:42px;text-align:center}
+  .bars{display:flex;align-items:flex-end;gap:3px;height:64px;margin:8px 0 2px}
+  .bars .b{flex:1;background:linear-gradient(180deg,#e23a7e,#b3164e);border-radius:4px 4px 0 0;min-height:2px;position:relative}
+  .bars .b.zero{background:var(--card2)}
+  .barlab{display:flex;gap:3px;font-size:8.5px;color:var(--muted)}
+  .barlab span{flex:1;text-align:center}
+  .chip{border:1.5px solid var(--line);background:var(--card2);border-radius:999px;padding:9px 13px;font:600 13px var(--sans);color:var(--ink);cursor:pointer;margin:3px 3px 3px 0}
+  .chip.sel{border-color:var(--rose);background:#54183a;color:var(--rose-deep)}
+  .dnav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+  .dnav b{font-size:15px}
+  .histrow{display:flex;justify-content:space-between;padding:8px 2px;border-bottom:1px solid var(--line);font-size:13px;cursor:pointer}
+  .histrow:hover{color:var(--rose-deep)}
+  .flt{display:flex;gap:7px;margin-bottom:10px;flex-wrap:wrap}
 </style>
 </head>
 <body>
 <div class="wrap" id="app"></div>
 <div class="tabs" id="tabs" style="display:none">
   <button data-t="home" class="on"><span class="ico">📊</span>Hôm nay</button>
+  <button data-t="digest"><span class="ico">📦</span>Cuối ngày<span class="badge" id="dgBadge" style="display:none">!</span></button>
   <button data-t="workers"><span class="ico">⭐</span>Thợ</button>
   <button data-t="fb"><span class="ico">💬</span>Feedback<span class="badge" id="fbBadge" style="display:none"></span></button>
-  <button data-t="more"><span class="ico">➕</span>Góp ý · Cài đặt</button>
+  <button data-t="more"><span class="ico">➕</span>Thêm</button>
 </div>
 
 <script>
@@ -84,15 +107,57 @@ async function rpc(fn,args){
   return j;
 }
 let TOKEN=localStorage.getItem("ns_owner_token")||null, ST=null, TAB="home", timer=null;
+let DG=null, DGHIST=[], dgSel=null;   // digest hiện xem + lịch sử
 
 const ISS_VI={wait:"Chờ lâu",attitude:"Thái độ",quality:"Chất lượng móng",price:"Giá",clean:"Vệ sinh",other:"Khác"};
-const QUESTIONS=[
-  "Phần nào trong app làm anh/chị thấy KHÓ DÙNG nhất?",
-  "Nếu được thêm đúng 1 tính năng, anh/chị muốn gì nhất?",
-  "Có số liệu/báo cáo nào anh/chị muốn xem mỗi ngày mà app chưa có?",
-  "Thợ và lễ tân than phiền điều gì về app nhiều nhất?",
-  "Điều gì suýt làm anh/chị KHÔNG muốn dùng app này?"];
-const qToday=QUESTIONS[Math.floor(Date.now()/864e5)%QUESTIONS.length];
+
+/* ===== TRẮC NGHIỆM CHỦ — 14 câu xoay theo ngày (data về Phoenix Star qua owner_pulse) ===== */
+const QUIZ=[
+ {k:"q_help",   q:"Hôm nay phần nào của app GIÚP anh/chị nhiều nhất?", c:["Check-in khách","Chia lượt thợ","Gọi nước","Feedback & review","Chưa thấy giúp gì"]},
+ {k:"q_next",   q:"Nếu app làm thêm đúng 1 việc, anh/chị chọn gì?", c:["Tính lương thợ","Đặt lịch hẹn","Nhắn tin khách quen","Quản lý tồn sơn"]},
+ {k:"q_guest",  q:"Khách của tiệm phản ứng với check-in QR thế nào?", c:["Thích, tự làm được","Bình thường","Nhiều người cần giúp","Không chịu dùng"]},
+ {k:"q_staff",  q:"Thợ dùng màn thợ (chuông nhận khách) có trơn tru không?", c:["Trơn tru","Tạm ổn","Hay quên mở","Không chịu dùng"]},
+ {k:"q_money",  q:"Doanh thu ước tính trong app có gần số thật không?", c:["Sát","Lệch chút ít","Lệch nhiều","Chưa để ý"]},
+ {k:"q_when",   q:"Anh/chị thường mở dashboard lúc nào?", c:["Sáng trước giờ mở","Trong giờ làm","Tối sau đóng cửa","Vài ngày một lần"]},
+ {k:"q_pain",   q:"Điều gì làm anh/chị MỆT nhất khi quản tiệm?", c:["Thợ so bì lượt","Khách chờ lâu bỏ về","Review xấu trên mạng","Sổ sách cuối ngày"]},
+ {k:"q_remind", q:"App tự nhắn khách quen sau 3 tuần chưa quay lại — anh/chị muốn không?", c:["Muốn ngay","Muốn nhưng để mình duyệt","Không cần"]},
+ {k:"q_pin",    q:"PIN nhân viên dùng chung có bất tiện không?", c:["Ổn","Muốn PIN riêng từng thợ","Muốn bỏ PIN"]},
+ {k:"q_report", q:"Bản tóm tắt cuối ngày này anh/chị muốn nhận qua đâu?", c:["Trong app thế này","Email","Tin nhắn điện thoại","In ra giấy"]},
+ {k:"q_menu",   q:"Giá menu trong app đã đúng giá tiệm chưa?", c:["Đúng","Gần đúng","Sai nhiều","Chưa nhập menu thật"]},
+ {k:"q_extra",  q:"Tính năng nào anh/chị thấy THỪA, không dùng?", c:["Gọi nước","Trắc nghiệm chấm khách của thợ","Hỏi đáp này","Không có gì thừa"]},
+ {k:"q_refer",  q:"Anh/chị có sẵn lòng giới thiệu app cho chủ tiệm quen không?", c:["Giới thiệu ngay","Chờ dùng thêm vài tuần","Chưa"]},
+ {k:"q_speed",  q:"Tốc độ app (mở trang, bấm nút) với anh/chị thế nào?", c:["Nhanh","Chấp nhận được","Chậm","Lúc nhanh lúc chậm"]}];
+function quizFor(dateStr){
+  const d=new Date(dateStr+"T12:00:00");
+  const doy=Math.floor((d - new Date(d.getFullYear(),0,0))/864e5);
+  return QUIZ[doy % QUIZ.length];
+}
+
+/* ===== 💡 INSIGHT rule-based (vi) — chạy trên payload _day_stats ===== */
+function pct(a,b){ if(!b) return null; return Math.round((a-b)/b*100); }
+function insights(cur, prev){
+  const out=[];
+  if(!cur) return out;
+  const c=+(cur.customers||0), p=prev?+(prev.customers||0):null;
+  if(p!=null && p>0 && c!==p) out.push(`${c>p?"📈":"📉"} Khách ${c>p?"tăng":"giảm"} ${Math.abs(pct(c,p))}% so với hôm trước (${c} vs ${p}).`);
+  const r=+(cur.est_revenue||0), pr=prev?+(prev.est_revenue||0):null;
+  if(pr!=null && pr>0 && r!==pr) out.push(`${r>pr?"💵":"🪙"} Doanh thu ước tính ${r>pr?"tăng":"giảm"} ${Math.abs(pct(r,pr))}% ($${r} vs $${pr}).`);
+  if(+(cur.low_stars||0)>0){
+    const lows=cur.low_details||[];
+    const cnt={}; lows.forEach(l=>(l.issues||[]).forEach(k=>cnt[k]=(cnt[k]||0)+1));
+    const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
+    out.push(`⚠️ ${cur.low_stars} lượt ≤3⭐${top?` — vấn đề nhắc nhiều nhất: <b>${ISS_VI[top[0]]||top[0]}</b>`:""}. ${lows.some(l=>l.recovery==="new")?"Còn khách CHƯA được gọi lại.":"Đã xử lý/đang xử lý."}`);
+  } else if(+(cur.ratings_in||0)>=2 && +(cur.avg_rating||0)>=4.7){
+    out.push(`💖 Khách rất hài lòng — ${cur.avg_rating}⭐ trung bình (${cur.ratings_in} đánh giá), không có lượt thấp.`);
+  }
+  if(cur.busiest_hour!=null) out.push(`⏰ Giờ đông nhất: <b>${cur.busiest_hour}h–${+cur.busiest_hour+1}h</b> — xếp thợ mạnh vào khung này.`);
+  const ts=(cur.top_services||[])[0];
+  if(ts) out.push(`💅 Được chọn nhiều nhất: <b>${esc(ts.label)}</b> ×${ts.n}.`);
+  if(cur.top_worker) out.push(`🏆 ${esc(cur.top_worker.name)} làm nhiều lượt nhất (${cur.top_worker.n}).`);
+  if(+(cur.returning||0)>0) out.push(`💞 ${cur.returning} khách quen quay lại.`);
+  if(+(cur.drinks||0)>0) out.push(`🍹 ${cur.drinks} ly nước${cur.top_drink?` — hot: ${esc(cur.top_drink)}`:""}.`);
+  return out;
+}
 
 /* ---------- LOGIN ---------- */
 function loginScreen(msg){
@@ -122,12 +187,18 @@ async function refresh(){
   try{ ST=await rpc("owner_state",{p_token:TOKEN}); render(); }
   catch(e){ if(String(e.message).startsWith("AUTH")) return loginScreen("Phiên hết hạn — đăng nhập lại nha"); }
 }
+async function loadDigest(dateStr){
+  DG = await rpc("owner_digest", dateStr?{p_token:TOKEN,p_date:dateStr}:{p_token:TOKEN});
+  dgSel = DG.date;
+  try{ DGHIST = await rpc("owner_digest_history",{p_token:TOKEN}); }catch(e){ DGHIST=[]; }
+}
 function boot(){ $("tabs").style.display="flex"; refresh(); clearInterval(timer); timer=setInterval(refresh,30000); }
 
 /* ---------- RENDER ---------- */
-document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{
+document.querySelectorAll("#tabs button").forEach(b=>b.onclick=async()=>{
   TAB=b.dataset.t;
   document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x===b));
+  if(TAB==="digest" && !DG){ try{ await loadDigest(null); }catch(e){} }
   render();
 });
 function header(){
@@ -139,44 +210,151 @@ function render(){
   if(!ST) return;
   const need=ST.need_call||0;
   $("fbBadge").style.display=need?"inline":"none"; $("fbBadge").textContent=need;
+  $("dgBadge").style.display = (DG && !DG.answered && !DG.live) ? "inline" : "none";
   if(TAB==="home") renderHome();
+  else if(TAB==="digest") renderDigest();
   else if(TAB==="workers") renderWorkers();
   else if(TAB==="fb") renderFb();
   else renderMore();
 }
+function delta(cur,prev,money){
+  const c=+(cur||0), p=+(prev||0);
+  if(!p) return `<div class="d flat">hôm qua: ${money?"$":""}${p}</div>`;
+  const df=pct(c,p);
+  const cls=df>0?"up":(df<0?"down":"flat");
+  const ar=df>0?"▲":(df<0?"▼":"=");
+  return `<div class="d ${cls}">${ar} ${Math.abs(df)}% vs hôm qua</div>`;
+}
 function renderHome(){
-  const t=ST.today||{};
+  const t=ST.today||{}, y=ST.yesterday||{};
+  const floor=ST.on_floor||[];
+  const hourly=t.hourly||{};
+  const hours=Array.from({length:13},(_,i)=>i+9); // 9h..21h
+  const mx=Math.max(1,...hours.map(h=>+(hourly[h]||0)));
+  const ins=insights(t,y);
   $("app").innerHTML=header()+`
     <div class="grid2">
-      <div class="stat"><div class="v">${t.customers||0}</div><div class="l">khách xong hôm nay</div></div>
-      <div class="stat"><div class="v">$${Number(t.est_revenue||0).toLocaleString()}</div><div class="l">doanh thu ước tính*</div></div>
-      <div class="stat"><div class="v">${t.avg_rating??"—"}</div><div class="l">sao trung bình (${t.ratings_in||0} đánh giá)</div></div>
-      <div class="stat"><div class="v">${ST.drinks_today||0}</div><div class="l">ly nước đã phục vụ</div></div>
+      <div class="stat"><div class="v">${t.customers||0}</div><div class="l">khách xong hôm nay</div>${delta(t.customers,y.customers)}</div>
+      <div class="stat"><div class="v">$${Number(t.est_revenue||0).toLocaleString()}</div><div class="l">doanh thu ước tính*</div>${delta(t.est_revenue,y.est_revenue,1)}</div>
+      <div class="stat"><div class="v">${t.avg_rating??"—"}</div><div class="l">sao TB (${t.ratings_in||0} đánh giá)</div>${y.avg_rating?`<div class="d flat">hôm qua: ${y.avg_rating}⭐</div>`:""}</div>
+      <div class="stat ${ST.need_call?"alert":""}" style="cursor:pointer" onclick="document.querySelector('[data-t=fb]').click()">
+        <div class="v">${ST.need_call||0} 🔴</div><div class="l">cần gọi lại — bấm xem</div></div>
     </div>
-    <div class="stat alert" style="margin-top:10px;cursor:pointer" onclick="document.querySelector('[data-t=fb]').click()">
-      <div class="v">${ST.need_call||0} 🔴</div><div class="l">feedback CẦN GỌI LẠI — bấm để xem</div></div>
-    <p class="sub" style="margin-top:10px">*Cộng từ giá tạm tính lúc check-in — POS thật sẽ chính xác hơn (block sau).</p>`;
+
+    <div class="card">
+      <b>🪑 Trên sàn ngay bây giờ</b> <span class="sub">· hàng chờ: <b style="color:var(--rose-deep)">${ST.waiting||0}</b> khách</span>
+      <div style="margin-top:6px">${
+        floor.length? floor.map(f=>`<div class="floor">
+          <span class="chairno">G${f.chair}</span>
+          <span style="flex:1"><b>${esc(f.worker||"—")}</b> → ${esc(f.customer)}</span>
+          <span class="sub">${f.status==="in_progress"?"💅 "+f.mins+"p":"📢 chờ thợ tới"}</span></div>`).join("")
+        : `<p class="sub" style="margin:8px 0 2px">Sàn trống — chưa ai đang làm.</p>`}</div>
+    </div>
+
+    <div class="card">
+      <b>⏰ Khách theo giờ (hôm nay)</b>
+      <div class="bars">${hours.map(h=>{const n=+(hourly[h]||0);
+        return `<div class="b ${n?"":"zero"}" style="height:${Math.max(4,Math.round(n/mx*100))}%" title="${h}h: ${n}"></div>`;}).join("")}</div>
+      <div class="barlab">${hours.map(h=>`<span>${h}</span>`).join("")}</div>
+    </div>
+
+    ${ins.length?`<div class="card"><b>💡 App nhận xét</b>${ins.map(i=>`<div class="insight">${i}</div>`).join("")}</div>`:""}
+    <p class="sub">*Cộng từ giá tạm tính lúc check-in — POS thật sẽ chính xác hơn (block sau).</p>`;
 }
+
+/* ---------- 📦 CUỐI NGÀY ---------- */
+let QSEL=null;
+function fmtD(d){ const [y,m,dd]=String(d).split("-"); return `${dd}/${m}/${y}`; }
+function shiftDay(ds,n){ const d=new Date(ds+"T12:00:00"); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+async function gotoDigest(ds){ try{ await loadDigest(ds); QSEL=null; render(); }catch(e){ alert(e.message); } }
+function renderDigest(){
+  if(!DG){ $("app").innerHTML=header()+`<div class="card center sub">Đang tải...</div>`; return; }
+  const s=DG.stats||{}, qz=quizFor(DG.date);
+  const ins=insights(s,null);
+  const lows=s.low_details||[];
+  const canNext = DG.date < DG.today;
+  $("app").innerHTML=header()+`
+    <div class="dnav">
+      <button class="pill" onclick="gotoDigest('${shiftDay(DG.date,-1)}')">‹ hôm trước</button>
+      <b>📦 ${DG.live?"HÔM NAY (tạm tính)":"Chốt sổ "+fmtD(DG.date)}</b>
+      <button class="pill" ${canNext?"":"disabled style='opacity:.3'"} onclick="gotoDigest('${shiftDay(DG.date,1)}')">hôm sau ›</button>
+    </div>
+
+    <div class="grid2">
+      <div class="stat"><div class="v">${s.customers||0}</div><div class="l">khách xong</div></div>
+      <div class="stat"><div class="v">$${Number(s.est_revenue||0).toLocaleString()}</div><div class="l">doanh thu ước tính</div></div>
+      <div class="stat"><div class="v">${s.avg_rating??"—"}</div><div class="l">sao TB · ${s.five_stars||0}×5⭐ · ${s.low_stars||0}×≤3⭐</div></div>
+      <div class="stat"><div class="v">${s.drinks||0}</div><div class="l">ly nước${s.top_drink?` · hot: ${esc(s.top_drink)}`:""}</div></div>
+    </div>
+
+    ${ins.length?`<div class="card"><b>💡 Phân tích ngày</b>${ins.map(i=>`<div class="insight">${i}</div>`).join("")}</div>`:""}
+
+    ${lows.length?`<div class="card"><b>🔴 Khách chưa vui hôm đó</b>${lows.map(l=>`
+      <div class="floor"><span class="chairno">${l.rating}⭐</span>
+        <span style="flex:1"><b>${esc(l.customer||"—")}</b>${(l.issues||[]).length?` · ${(l.issues||[]).map(k=>ISS_VI[k]||k).join(", ")}`:""}</span>
+        <span class="stt ${l.recovery}">${l.recovery==="new"?"chưa gọi":(l.recovery==="contacted"?"đã gọi":"xong ✓")}</span></div>`).join("")}</div>`:""}
+
+    <div class="card">
+      <b>🗳️ Câu hỏi cho chủ — ${fmtD(DG.date)}</b>
+      <p class="sub">Mỗi ngày 1 câu, 10 giây — giúp NailSync hợp với tiệm mình hơn.</p>
+      ${DG.answered
+        ? `<div class="qbox" style="margin-top:9px">✅ Đã trả lời: <b>${esc((DG.answer&&DG.answer.choice)||"")}</b>${DG.answer&&DG.answer.note?`<br><span class="sub">"${esc(DG.answer.note)}"</span>`:""}<br><span class="sub">Cảm ơn anh/chị nhiều! 🙏</span></div>`
+        : `<div class="qbox" style="margin-top:9px">❓ ${esc(qz.q)}</div>
+           <div>${qz.c.map(c=>`<button class="chip ${QSEL===c?"sel":""}" onclick="QSEL='${c.replace(/'/g,"\\'")}';render()">${esc(c)}</button>`).join("")}</div>
+           <textarea id="qnote" rows="2" placeholder="Nói thêm gì không ạ? (không bắt buộc)" style="margin-top:9px"></textarea>
+           <div style="height:9px"></div>
+           <button class="btn" ${QSEL?"":"disabled"} onclick="sendPulse('${qz.k}')">Gửi câu trả lời</button>`}
+    </div>
+
+    ${DGHIST.length?`<div class="card"><b>🗓️ 7 ngày gần đây</b>
+      ${DGHIST.map(h=>`<div class="histrow" onclick="gotoDigest('${h.date}')">
+        <span>${fmtD(h.date)}</span><span>${h.customers||0} khách</span>
+        <span>$${Number(h.est_revenue||0).toLocaleString()}</span><span>${h.avg_rating??"—"}⭐</span></div>`).join("")}</div>`:""}`;
+}
+async function sendPulse(qk){
+  const qz=quizFor(DG.date);
+  const note=$("qnote")?$("qnote").value.trim():null;
+  try{
+    await rpc("owner_pulse_answer",{p_token:TOKEN,p_asked_on:DG.date,p_qkey:qk,p_question:qz.q,p_choice:QSEL,p_note:note||null});
+    await loadDigest(DG.date); QSEL=null; render();
+  }catch(e){ alert(e.message); }
+}
+
+/* ---------- ⭐ THỢ ---------- */
 function renderWorkers(){
   const ws=ST.workers||[];
   $("app").innerHTML=header()+`<div class="card">
-    <b>⭐ Review thợ — 30 ngày</b>
-    <table style="margin-top:8px"><tr><th>Thợ</th><th class="r">Lượt</th><th class="r">Sao TB</th><th class="r">≤3⭐</th></tr>
-    ${ws.map(w=>`<tr><td><b>${esc(w.name)}</b></td><td class="r">${w.jobs_30d}</td>
+    <b>⭐ Review thợ</b>
+    <table style="margin-top:8px"><tr><th>Thợ</th><th class="r">Hôm nay</th><th class="r">30 ngày</th><th class="r">Sao TB</th><th class="r">≤3⭐</th></tr>
+    ${ws.map(w=>`<tr><td><b>${esc(w.name)}</b></td>
+      <td class="r" style="color:var(--rose-deep);font-weight:700">${w.jobs_today||0}</td>
+      <td class="r">${w.jobs_30d}</td>
       <td class="r">${w.avg_rating??"—"}</td>
-      <td class="r" style="color:${w.low_30d>0?"var(--red)":"var(--muted)"};font-weight:${w.low_30d>0?800:400}">${w.low_30d}</td></tr>`).join("")||"<tr><td colspan=4 class='sub'>Chưa có lượt nào</td></tr>"}
+      <td class="r" style="color:${w.low_30d>0?"var(--red)":"var(--muted)"};font-weight:${w.low_30d>0?800:400}">${w.low_30d}</td></tr>`).join("")||"<tr><td colspan=5 class='sub'>Chưa có lượt nào</td></tr>"}
     </table></div>`;
 }
+
+/* ---------- 💬 FEEDBACK (filter) ---------- */
+let FFLT="all";
 function renderFb(){
-  const fbs=ST.feedbacks||[];
-  $("app").innerHTML=header()+
-    (fbs.length?"":`<div class="card center sub">Chưa có feedback trong 7 ngày</div>`)+
+  const all=ST.feedbacks||[];
+  const fbs=all.filter(f=> FFLT==="all" ? true :
+    FFLT==="new" ? (f.rating<=3 && f.recovery==="new") :
+    FFLT==="mid" ? f.rating===4 :
+    FFLT==="done" ? (f.recovery==="contacted"||f.recovery==="resolved") : true);
+  const cnt=k=>all.filter(f=> k==="new"?(f.rating<=3&&f.recovery==="new"):k==="mid"?f.rating===4:(f.recovery==="contacted"||f.recovery==="resolved")).length;
+  $("app").innerHTML=header()+`
+    <div class="flt">
+      ${[["all","Tất cả ("+all.length+")"],["new","🔴 Cần gọi ("+cnt("new")+")"],["mid","🟡 4⭐ ("+cnt("mid")+")"],["done","✓ Đã xử lý ("+cnt("done")+")"]]
+        .map(([k,l])=>`<button class="chip ${FFLT===k?"sel":""}" onclick="FFLT='${k}';render()">${l}</button>`).join("")}
+    </div>`+
+    (fbs.length?"":`<div class="card center sub">Không có feedback trong nhóm này (7 ngày)</div>`)+
     fbs.map(f=>{
       const cls=f.rating<=3?"low":(f.rating===4?"mid":"");
       const stars="⭐".repeat(f.rating);
       const tags=(f.issues||[]).map(k=>`<span class="tag">${esc(ISS_VI[k]||k)}</span>`).join("");
       const act = f.rating<=3 ? (
-        f.recovery==="resolved" ? `<span class="stt resolved">✓ đã xử lý</span>` :
+        f.recovery==="resolved" ? `<span class="stt resolved">✓ đã xử lý${f.note?" · có ghi chú":""}</span>` :
         `<span class="stt ${f.recovery}">${f.recovery==="new"?"🔴 cần gọi":"🟡 đã gọi"}</span>
          ${f.recovery==="new"?`<button class="btn ghost" onclick="setRec('${f.id}','contacted')">📞 Đã gọi</button>`:""}
          <button class="btn green" onclick="setRec('${f.id}','resolved')">✓ Đã xử lý</button>`) : "";
@@ -196,13 +374,22 @@ async function setRec(id,status){
   try{ await rpc("owner_set_recovery",{p_token:TOKEN,p_feedback:id,p_status:status,p_note:note}); refresh(); }
   catch(e){ alert(e.message); }
 }
+
+/* ---------- ➕ THÊM ---------- */
+const QUESTIONS=[
+  "Phần nào trong app làm anh/chị thấy KHÓ DÙNG nhất?",
+  "Nếu được thêm đúng 1 tính năng, anh/chị muốn gì nhất?",
+  "Có số liệu/báo cáo nào anh/chị muốn xem mỗi ngày mà app chưa có?",
+  "Thợ và lễ tân than phiền điều gì về app nhiều nhất?",
+  "Điều gì suýt làm anh/chị KHÔNG muốn dùng app này?"];
+const qToday=QUESTIONS[Math.floor(Date.now()/864e5)%QUESTIONS.length];
 function renderMore(){
   const cfg=ST.config||{};
   const sugs=ST.suggestions||[];
   $("app").innerHTML=header()+`
     <div class="card">
       <b>💡 Góp ý cho NailSync</b>
-      <p class="sub">Câu trả lời đi thẳng tới đội phát triển app — giúp app hợp với tiệm mình hơn.</p>
+      <p class="sub">Câu trả lời đi thẳng tới đội phát triển app.</p>
       <div class="qbox" style="margin-top:9px">❓ ${esc(qToday)}</div>
       <textarea id="sg" rows="3" placeholder="Anh/chị cứ nói thẳng ạ..."></textarea>
       <div style="height:9px"></div>
